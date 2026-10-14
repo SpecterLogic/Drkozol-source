@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="dr_ping_connected">Qoşulmuş serverin pingi</string>
+    <string name="dr_account_info">Abunəlik məlumatı</string>
+    <string name="dr_color_palette">Rəng palitrası</string>
+    <string name="dr_palette_forest">Meşə</string>
+    <string name="dr_palette_maroon">Bordo</string>
+    <string name="dr_palette_purple">Bənövşəyi</string>
+    <string name="dr_theme_selected">%1$s · %2$s</string>
+    <string name="dr_configure">Tənzimlə</string>
+    <string name="dr_tunnel">Tunel</string>
+    <string name="dr_providers">Abunəliklər</string>
+    <string name="dr_debug">Diaqnostika</string>
+    <string name="dr_about_title">DrKozol haqqında</string>
+    <string name="dr_about_description">DrKozol təhlükəsiz bağlantılar üçün abunəlik müştərinizdir.</string>
+    <string name="dr_tcp_result">TCP · %1$s</string>
+    <string name="dr_tcp_udp">TCP: — (UDP)</string>
+    <string name="dr_legal_information">Hüquqi məlumat</string>
+    <string name="dr_copyright">Copyright © 2026 Drkozol.</string>
+</resources>

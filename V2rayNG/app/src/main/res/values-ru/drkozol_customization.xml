@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="dr_ping_connected">Пинг подключённого сервера</string>
+    <string name="dr_account_info">Информация о подписке</string>
+    <string name="dr_color_palette">Цветовая палитра</string>
+    <string name="dr_palette_forest">Лес</string>
+    <string name="dr_palette_maroon">Бордовый</string>
+    <string name="dr_palette_purple">Фиолетовый</string>
+    <string name="dr_theme_selected">%1$s · %2$s</string>
+    <string name="dr_configure">Настроить</string>
+    <string name="dr_tunnel">Туннель</string>
+    <string name="dr_providers">Подписки</string>
+    <string name="dr_debug">Диагностика</string>
+    <string name="dr_about_title">О DrKozol</string>
+    <string name="dr_about_description">DrKozol — ваш клиент подписок для безопасных подключений.</string>
+    <string name="dr_tcp_result">TCP · %1$s</string>
+    <string name="dr_tcp_udp">TCP: — (UDP)</string>
+    <string name="dr_legal_information">Правовая информация</string>
+    <string name="dr_copyright">Copyright © 2026 Drkozol.</string>
+</resources>

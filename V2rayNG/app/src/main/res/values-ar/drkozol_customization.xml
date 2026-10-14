@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="dr_ping_connected">اختبار الخادم المتصل</string>
+    <string name="dr_account_info">معلومات الاشتراك</string>
+    <string name="dr_color_palette">ألوان الواجهة</string>
+    <string name="dr_palette_forest">غابة</string>
+    <string name="dr_palette_maroon">عنابي</string>
+    <string name="dr_palette_purple">بنفسجي</string>
+    <string name="dr_theme_selected">%1$s · %2$s</string>
+    <string name="dr_configure">إعداد</string>
+    <string name="dr_tunnel">النفق</string>
+    <string name="dr_providers">الاشتراكات</string>
+    <string name="dr_debug">التشخيص</string>
+    <string name="dr_about_title">حول DrKozol</string>
+    <string name="dr_about_description">DrKozol هو عميل اشتراكاتك للاتصالات الآمنة.</string>
+    <string name="dr_tcp_result">TCP · %1$s</string>
+    <string name="dr_tcp_udp">TCP: — (UDP)</string>
+    <string name="dr_legal_information">المعلومات القانونية</string>
+    <string name="dr_copyright">Copyright © 2026 Drkozol.</string>
+</resources>

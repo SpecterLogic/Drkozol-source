@@ -1,0 +1,10 @@
+**/build/
+**/.gradle/
+**/.kotlin/
+**/local.properties
+V2rayNG/app/libs/
+V2rayNG/app/src/main/assets/*.dat
+artifacts/
+libs/
+*.jks
+*.keystore

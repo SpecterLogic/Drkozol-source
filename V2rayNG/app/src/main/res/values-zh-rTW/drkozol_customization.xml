@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="dr_ping_connected">測試已連線伺服器</string>
+    <string name="dr_account_info">訂閱資訊</string>
+    <string name="dr_color_palette">介面配色</string>
+    <string name="dr_palette_forest">森林</string>
+    <string name="dr_palette_maroon">栗色</string>
+    <string name="dr_palette_purple">紫色</string>
+    <string name="dr_theme_selected">%1$s · %2$s</string>
+    <string name="dr_configure">設定</string>
+    <string name="dr_tunnel">通道</string>
+    <string name="dr_providers">訂閱</string>
+    <string name="dr_debug">診斷</string>
+    <string name="dr_about_title">關於 DrKozol</string>
+    <string name="dr_about_description">DrKozol 是用於安全連線的訂閱用戶端。</string>
+    <string name="dr_tcp_result">TCP · %1$s</string>
+    <string name="dr_tcp_udp">TCP: — (UDP)</string>
+    <string name="dr_legal_information">法律資訊</string>
+    <string name="dr_copyright">Copyright © 2026 Drkozol.</string>
+</resources>

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="dr_ping_connected">Ping máy chủ đang kết nối</string>
+    <string name="dr_account_info">Thông tin đăng ký</string>
+    <string name="dr_color_palette">Bảng màu</string>
+    <string name="dr_palette_forest">Rừng</string>
+    <string name="dr_palette_maroon">Đỏ nâu</string>
+    <string name="dr_palette_purple">Tím</string>
+    <string name="dr_theme_selected">%1$s · %2$s</string>
+    <string name="dr_configure">Cấu hình</string>
+    <string name="dr_tunnel">Đường hầm</string>
+    <string name="dr_providers">Đăng ký</string>
+    <string name="dr_debug">Chẩn đoán</string>
+    <string name="dr_about_title">Giới thiệu DrKozol</string>
+    <string name="dr_about_description">DrKozol là ứng dụng đăng ký của bạn cho các kết nối an toàn.</string>
+    <string name="dr_tcp_result">TCP · %1$s</string>
+    <string name="dr_tcp_udp">TCP: — (UDP)</string>
+    <string name="dr_legal_information">Thông tin pháp lý</string>
+    <string name="dr_copyright">Copyright © 2026 Drkozol.</string>
+</resources>

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="dr_ping_connected">সংযুক্ত সার্ভারের পিং</string>
+    <string name="dr_account_info">সাবস্ক্রিপশনের তথ্য</string>
+    <string name="dr_color_palette">রঙের প্যালেট</string>
+    <string name="dr_palette_forest">বন</string>
+    <string name="dr_palette_maroon">মেরুন</string>
+    <string name="dr_palette_purple">বেগুনি</string>
+    <string name="dr_theme_selected">%1$s · %2$s</string>
+    <string name="dr_configure">কনফিগার করুন</string>
+    <string name="dr_tunnel">টানেল</string>
+    <string name="dr_providers">সাবস্ক্রিপশন</string>
+    <string name="dr_debug">সমস্যা নির্ণয়</string>
+    <string name="dr_about_title">DrKozol সম্পর্কে</string>
+    <string name="dr_about_description">DrKozol নিরাপদ সংযোগের জন্য আপনার সাবস্ক্রিপশন ক্লায়েন্ট।</string>
+    <string name="dr_tcp_result">TCP · %1$s</string>
+    <string name="dr_tcp_udp">TCP: — (UDP)</string>
+    <string name="dr_legal_information">আইনি তথ্য</string>
+    <string name="dr_copyright">Copyright © 2026 Drkozol.</string>
+</resources>

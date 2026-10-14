@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="dr_home">خانه</string>
+    <string name="dr_current_provider">اشتراک فعلی</string>
+    <string name="dr_appearance">ظاهر برنامه</string>
+    <string name="dr_connection">اتصال</string>
+    <string name="dr_application">برنامه</string>
+    <string name="dr_language">زبان</string>
+    <string name="dr_theme">تم</string>
+    <string name="dr_search">جستجوی سرورها</string>
+    <string name="dr_paste">چسباندن</string>
+    <string name="dr_collapse">بستن کارت‌های اشتراک</string>
+    <string name="dr_sort">مرتب‌سازی بر اساس تأخیر</string>
+    <string name="dr_provider_count">%1$d اشتراک</string>
+    <string name="dr_server_count">%1$d سرور</string>
+    <string name="dr_expand">نمایش یا پنهان‌کردن سرورها</string>
+    <string name="dr_updated">به‌روزرسانی %1$s</string>
+    <string name="dr_advanced">تنظیمات پیشرفته</string>
+    <string name="dr_scan">اسکن کد QR</string>
+    <string name="dr_more">گزینه‌های اشتراک</string>
+    <string name="dr_tap_connect">برای اتصال لمس کنید</string>
+    <string name="dr_hours">%1$d ساعت</string>
+    <string name="dr_expanded">بازشده</string>
+    <string name="dr_collapsed">بسته</string>
+</resources>

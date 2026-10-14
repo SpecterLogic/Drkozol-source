@@ -1,0 +1,7 @@
+Routing assets: https://github.com/Loyalsoldier/v2ray-rules-dat
+Retrieved 2026-10-11; license GPL-3.0.
+geoip.dat SHA-256: 116cc0f03d48991962f7f9cdbbcf53d45d89777f9c3cd1a663210853e5df6093
+geosite.dat SHA-256: e5d2232b6b0fe8eb8f4e7ebe3964fe13e5ff3d4f39065b97d77523eb376b4af9
+
+geoip-only-cn-private.dat: https://github.com/Loyalsoldier/geoip/releases/latest/download/geoip-only-cn-private.dat
+SHA256 771b99547144e9a4547a2c4860d31e9ba1fc52f8f4be98fc485b889b7ae3fd8d (verified against release checksum).

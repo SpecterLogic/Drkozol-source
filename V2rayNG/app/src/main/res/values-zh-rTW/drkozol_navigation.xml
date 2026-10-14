@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="dr_home">Home</string>
+    <string name="dr_current_provider">Current subscription</string>
+    <string name="dr_appearance">Appearance</string>
+    <string name="dr_connection">Connection</string>
+    <string name="dr_application">Application</string>
+    <string name="dr_language">Language</string>
+    <string name="dr_theme">Theme</string>
+    <string name="dr_search">Search servers</string>
+    <string name="dr_paste">Paste</string>
+    <string name="dr_collapse">Collapse subscriptions</string>
+    <string name="dr_sort">Sort by delay</string>
+    <string name="dr_provider_count">%1$d subscriptions</string>
+    <string name="dr_server_count">%1$d servers</string>
+    <string name="dr_expand">Show or hide servers</string>
+    <string name="dr_updated">Updated %1$s</string>
+    <string name="dr_advanced">Advanced settings</string>
+    <string name="dr_scan">Scan QR code</string>
+    <string name="dr_more">Subscription options</string>
+    <string name="dr_tap_connect">Tap to connect</string>
+    <string name="dr_hours">%1$d h</string>
+    <string name="dr_expanded">Expanded</string>
+    <string name="dr_collapsed">Collapsed</string>
+</resources>

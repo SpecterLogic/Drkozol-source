@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="dr_ping_connected">Ping connected server</string>
+    <string name="dr_account_info">Subscription information</string>
+    <string name="dr_color_palette">Color palette</string>
+    <string name="dr_palette_forest">Forest</string>
+    <string name="dr_palette_maroon">Maroon</string>
+    <string name="dr_palette_purple">Purple</string>
+    <string name="dr_theme_selected">%1$s · %2$s</string>
+    <string name="dr_configure">Configure</string>
+    <string name="dr_tunnel">Tunnel</string>
+    <string name="dr_providers">Subscriptions</string>
+    <string name="dr_debug">Diagnostics</string>
+    <string name="dr_about_title">About DrKozol</string>
+    <string name="dr_about_description">DrKozol is your subscription client for secure connections.</string>
+    <string name="dr_tcp_result">TCP · %1$s</string>
+    <string name="dr_tcp_udp">TCP: — (UDP)</string>
+    <string name="dr_legal_information">Legal information</string>
+    <string name="dr_copyright">Copyright © 2026 Drkozol.</string>
+</resources>

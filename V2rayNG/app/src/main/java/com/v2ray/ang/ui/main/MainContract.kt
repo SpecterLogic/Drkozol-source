@@ -13,6 +13,8 @@ sealed interface MainStatus {
     data class ConnectionTest(val result: ConnectionTestResult) : MainStatus
 }
 
+enum class HomeConnectionChoice { MANUAL, BEST, BALANCER }
+
 /**
  * Main UI state
  */
@@ -22,6 +24,7 @@ data class MainUiState(
     val selectedGuid: String? = null,
     val isRunning: Boolean = false,
     val isConnecting: Boolean = false,
+    val homeConnectionChoice: HomeConnectionChoice = HomeConnectionChoice.MANUAL,
     val isTesting: Boolean = false,
     val status: MainStatus = MainStatus.Disconnected,
     val locateTarget: LocateTarget? = null,
@@ -76,7 +79,13 @@ data class SelectedServerSummary(val guid: String, val name: String, val protoco
 
 internal fun MainUiState.withSelectedServerSnapshot(guid: String?, profile: com.v2ray.ang.dto.entities.ProfileItem?): MainUiState {
     if (guid != selectedGuid) return this
-    return copy(selectedServerSummary = if (guid.isNullOrEmpty() || profile == null) null
+    val choice = when {
+        guid.isNullOrEmpty() || profile == null -> HomeConnectionChoice.MANUAL
+        profile.configType == com.v2ray.ang.enums.EConfigType.POLICYGROUP -> HomeConnectionChoice.BALANCER
+        homeConnectionChoice == HomeConnectionChoice.BEST -> HomeConnectionChoice.BEST
+        else -> HomeConnectionChoice.MANUAL
+    }
+    return copy(homeConnectionChoice = choice, selectedServerSummary = if (guid.isNullOrEmpty() || profile == null) null
         else SelectedServerSummary(guid, profile.remarks, serverProtocolDescription(profile), configurationFlag(profile.remarks), profile.subscriptionId))
 }
 

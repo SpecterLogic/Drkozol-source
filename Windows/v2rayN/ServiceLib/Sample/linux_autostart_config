@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Exec=$ExecPath$
+Hidden=false
+NoDisplay=false
+X-GNOME-Autostart-enabled=true
+Name[en_US]=DrKozol
+Name=DrKozol
+Comment[en_US]=DrKozol subscription client
+Comment=DrKozol subscription client

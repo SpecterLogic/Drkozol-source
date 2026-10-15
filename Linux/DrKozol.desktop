@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=DrKozol
+Comment=Subscription VPN client
+Comment[fa]=کلاینت اشتراک و اتصال VPN
+Exec=DrKozol
+Icon=DrKozol
+Terminal=false
+Categories=Network;
+StartupWMClass=DrKozol

@@ -996,14 +996,14 @@ class MainViewModel(
         }
     }
 
-    suspend fun updateSelectedGuid(guid: String): Boolean = withContext(ioDispatcher) {
+    suspend fun updateSelectedGuid(guid: String, choice: HomeConnectionChoice = HomeConnectionChoice.MANUAL): Boolean = withContext(ioDispatcher) {
         selectionMutex.withLock {
             try {
                 val profile = dataSource.decodeServerConfig(guid) ?: return@withLock false
                 if (com.v2ray.ang.handler.ProfileEligibility.isAccountInfo(profile)) return@withLock false
                 ensureActive()
                 dataSource.setSelectServer(guid)
-                _uiState.update { it.copy(selectedGuid = guid) }
+                _uiState.update { it.copy(selectedGuid = guid, homeConnectionChoice = choice) }
                 true
             } catch (cancelled: CancellationException) {
                 throw cancelled
@@ -1039,7 +1039,7 @@ class MainViewModel(
             best = fastestServerGuid(eligible, finished.realResults, finished.tcpResults)
         }
         if (best == null) { toastError(R.string.dr_no_healthy_server); return false }
-        return updateSelectedGuid(best)
+        return updateSelectedGuid(best, HomeConnectionChoice.BEST)
     }
 
     suspend fun chooseBalancerForConnection(): Boolean = withContext(ioDispatcher) {
@@ -1048,7 +1048,7 @@ class MainViewModel(
             ?: state.selectedGroupId
         val guid = dataSource.createBalancer(groupId) ?: return@withContext false
         setupGroupTab(forceRefresh = true).join()
-        updateSelectedGuid(guid)
+        updateSelectedGuid(guid, HomeConnectionChoice.BALANCER)
     }
 
     fun refreshSelectedGuid() {

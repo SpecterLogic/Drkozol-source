@@ -1,39 +1,67 @@
-# Drkozol Android corresponding source
+# DrKozol 1.4.6 corresponding source
 
-Copyright © 2026 Drkozol.
-
-Android application source for release 1.4.5. APK downloads and feedback:
+Source for the Android, Windows and Linux applications. Downloads and feedback:
 https://github.com/SpecterLogic/Drkozol
 
-This repository is a clean source snapshot without previous development history.
-The Android application is distributed under GPLv3; see LICENSE. Individual
-components retain their respective copyrights and licenses. Drkozol branding and
-original artwork are reserved; this does not restrict rights granted by the software licenses.
-
-The source release contains the same snapshot with verified native compiler inputs
-and public routing data. Download DrKozol-source-1.4.5.zip from this repository's
-Releases to build without any private bootstrap service. Signing keys, credentials,
-subscription accounts and local settings are excluded.
+The applications and components retain their respective software licenses and
+copyright notices. See LICENSE, Windows/LICENSE, docs/licenses and the notices
+inside individual components. Copyright © 2026 Drkozol applies to original branding
+and artwork without restricting rights granted by those software licenses.
 
 ## Build from the source release archive
 
-Install JDK 21, Android SDK platform android-37.0, build-tools 37.0.0, and NDK
-30.0.16248370. Set ANDROID_HOME and JAVA_HOME. In V2rayNG run:
+Download DrKozol-source-1.4.6.zip from this repository's Releases. The archive
+includes the verified Android native compiler inputs and routing data used in the
+release. Signing keys, subscriptions and local settings are excluded.
+
+### Android
+
+Install JDK 21, Android SDK platform android-37.0, build-tools 37.0.0 and NDK
+30.0.16248370. Set ANDROID_HOME and JAVA_HOME, then:
 
 ```sh
+cd V2rayNG
 chmod +x gradlew
 ./gradlew :app:testPlaystoreDebugUnitTest :app:assemblePlaystoreRelease
 ```
 
-The archive includes the native inputs used for the released APK. It does not
-include the release signing key; rebuilding produces an unsigned release.
+This produces an unsigned APK. Both Play Store and F-Droid build variants are
+available. The Gradle files define the supported architectures and SDK versions.
 
-## Rebuild native components
+### Windows x64
 
-All pinned wrapper and HEV source trees are included. SOURCE-MODULES.json records
-their upstream revisions. Go modules are pinned in go.mod/go.sum. Install Go
-1.27.2 and set ANDROID_NDK_HOME to the NDK above. To restore the wrapper's upstream
-revision metadata without replacing its provided source files:
+Install .NET SDK 10.0.401, Go 1.27.2 and Python 3. Add them to PATH. From the root:
+
+```powershell
+./tools/build_windows.ps1
+dotnet run --project Windows/v2rayN/ServiceLib.Tests/ServiceLib.Tests.csproj -c Release
+```
+
+The application and protocol engines are generated in artifacts/windows. Keep the
+bin directory beside DrKozol.exe. TUN creation needs administrator rights.
+
+### Linux x64
+
+Install the same .NET SDK, Go and Python versions and the desktop dependencies
+listed in Linux/README-fa.md. From the root:
+
+```sh
+sh tools/build_linux.sh
+python3 tools/package_linux.py artifacts/linux
+```
+
+The build produces artifacts/linux and installable packages in artifacts/packages.
+The graphical app runs as an ordinary user. Linux/install-tun.sh grants the pinned
+TUN engine the network capability needed to create a virtual adapter.
+
+## Native sources
+
+SOURCE-MODULES.json records the wrapper and HEV source revisions. Go modules are
+pinned in go.mod/go.sum. The archive also includes the patched Xray source and the
+AmneziaWG Go source. tools/prepare_xray_compat.py checks the upstream source hash
+before applying the compatibility patch; tools/test_xray_compat.py validates it.
+For an Android native rebuild, restore the wrapper's upstream revision metadata
+without replacing the provided source:
 
 ```sh
 git -C AndroidLibXrayLite init
@@ -49,8 +77,7 @@ for abi in arm64-v8a armeabi-v7a x86 x86_64; do
 done
 ```
 
-The unchanged official AmneziaWG libwg-go.so provenance and its exact upstream
-source commit are documented in V2rayNG/awg/PROVENANCE.md. The Android Java wrapper
-source, its changes and license are included. Other component licenses are retained
-in their source trees and Android legal notices. Personal identities and private
-development links are not part of this source distribution.
+The unchanged official Android libwg-go.so provenance and exact source revision
+are documented in V2rayNG/awg/PROVENANCE.md. Its wrapper sources and notices are
+included. Native TUN engine versions, upstream downloads and integrity checks are
+specified in tools/bootstrap_windows_tun.py and tools/bootstrap_linux_tun.py.

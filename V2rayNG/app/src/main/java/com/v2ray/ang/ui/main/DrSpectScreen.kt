@@ -34,6 +34,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.draw.rotate
@@ -79,6 +80,7 @@ fun DrSpectScreen(mainViewModel: MainViewModel, dispatchAction: (MainAction) -> 
     val themeMode by ThemeManager.themeMode.collectAsStateWithLifecycle()
     val dynamicColors by ThemeManager.dynamicColorEnabled.collectAsStateWithLifecycle()
     var tab by rememberSaveable { mutableIntStateOf(0) }
+    androidx.activity.compose.BackHandler(enabled = tab != 0) { tab = 0 }
     var importing by rememberSaveable { mutableStateOf(false) }
     var input by rememberSaveable { mutableStateOf("") }
     var search by rememberSaveable { mutableStateOf("") }
@@ -179,11 +181,13 @@ fun DrSpectScreen(mainViewModel: MainViewModel, dispatchAction: (MainAction) -> 
                             verticalArrangement = Arrangement.spacedBy(if (compact) 18.dp else 28.dp)) {
                             ConnectionPower(state, powerSize) { onAction(MainAction.ToggleService) }
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                FilledTonalButton(onClick = { onAction(MainAction.ConnectBestServer) }, enabled = !state.isTesting && !state.isConnecting && !state.backgroundTesting && !loading) {
+                                HomeConnectionButton(selected = state.homeConnectionChoice == HomeConnectionChoice.BEST,
+                                    onClick = { onAction(MainAction.ConnectBestServer) }, enabled = !state.isTesting && !state.isConnecting && !state.backgroundTesting && !loading) {
                                     Icon(painterResource(R.drawable.dr_speed), null, Modifier.size(19.dp))
                                     Spacer(Modifier.width(6.dp)); Text(stringResource(R.string.dr_connect_best), fontSize = 12.sp)
                                 }
-                                OutlinedButton(onClick = { onAction(MainAction.ConnectBalancer) }, enabled = !state.isTesting && !state.isConnecting && !state.backgroundTesting && !loading) {
+                                HomeConnectionButton(selected = state.homeConnectionChoice == HomeConnectionChoice.BALANCER,
+                                    onClick = { onAction(MainAction.ConnectBalancer) }, enabled = !state.isTesting && !state.isConnecting && !state.backgroundTesting && !loading) {
                                     Icon(painterResource(R.drawable.dr_layers), null, Modifier.size(19.dp))
                                     Spacer(Modifier.width(6.dp)); Text(stringResource(R.string.dr_balancer), fontSize = 12.sp)
                                 }
@@ -196,8 +200,8 @@ fun DrSpectScreen(mainViewModel: MainViewModel, dispatchAction: (MainAction) -> 
                                 Metric(stringResource(R.string.dr_session), bytes(state.traffic.sessionBytes), ink, muted)
                             }
                             if (state.isRunning) {
-                                OutlinedButton(onClick = { onAction(MainAction.TestCurrentServer) }, enabled = !state.isTesting && !state.isConnecting,
-                                    shape = RoundedCornerShape(16.dp), modifier = Modifier.heightIn(min = 48.dp)) {
+                                HomeConnectionButton(selected = state.isTesting,
+                                    onClick = { onAction(MainAction.TestCurrentServer) }, enabled = !state.isTesting && !state.isConnecting) {
                                     Icon(painterResource(R.drawable.dr_speed), null, Modifier.size(19.dp))
                                     Spacer(Modifier.width(8.dp))
                                     Text(stringResource(R.string.dr_ping_connected))
@@ -357,6 +361,22 @@ fun DrSpectScreen(mainViewModel: MainViewModel, dispatchAction: (MainAction) -> 
     }
 }
 }
+}
+
+@Composable
+private fun HomeConnectionButton(selected: Boolean, onClick: () -> Unit, enabled: Boolean,
+    content: @Composable RowScope.() -> Unit) {
+    val colors = MaterialTheme.colorScheme
+    val shape = RoundedCornerShape(24.dp)
+    OutlinedButton(onClick = onClick, enabled = enabled, shape = shape,
+        modifier = Modifier.heightIn(min = 48.dp)
+            .semantics { this.selected = selected }
+            .insetSelection(selected, shape, colors.surface, colors.primary),
+        border = BorderStroke(1.dp, colors.primary.copy(alpha = .25f)),
+        colors = ButtonDefaults.outlinedButtonColors(containerColor = Color.Transparent,
+            disabledContainerColor = Color.Transparent, contentColor = colors.primary,
+            disabledContentColor = if (selected) colors.primary else colors.onSurfaceVariant),
+        content = content)
 }
 
 @Composable

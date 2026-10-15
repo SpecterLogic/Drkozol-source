@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item type="drawable" name="ic_stat_name">@drawable/dr_notification</item>
+    <item type="drawable" name="ic_stat_name_black">@drawable/dr_notification</item>
+</resources>

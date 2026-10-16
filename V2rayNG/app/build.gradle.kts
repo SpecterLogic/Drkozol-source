@@ -15,8 +15,8 @@ android {
         applicationId = "com.drkozol.client"
         minSdk = 24
         targetSdk = 37
-        versionCode = 12
-        versionName = "1.4.6"
+        versionCode = 13
+        versionName = "1.4.7"
 
         val abiFilterList = (properties["ABI_FILTERS"] as? String)?.split(';')
         splits {

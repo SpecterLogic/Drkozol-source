@@ -66,7 +66,8 @@ fun DrSpectScreen(mainViewModel: MainViewModel, dispatchAction: (MainAction) -> 
         val now = android.os.SystemClock.uptimeMillis()
         if (state.preferences.enabled(com.v2ray.ang.handler.ClientOption.VIBRATION) && now - lastFeedback[0] >= 80L) {
             lastFeedback[0] = now
-            view.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
+            // App actions use touch feedback, not the independently configured keyboard channel.
+            view.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
         }
     }
     val onAction: (MainAction) -> Unit = { action ->
@@ -74,6 +75,17 @@ fun DrSpectScreen(mainViewModel: MainViewModel, dispatchAction: (MainAction) -> 
         dispatchAction(action)
     }
     val onNavigate: (MainDestination) -> Unit = { destination -> feedback(); dispatchNavigation(destination) }
+    val savedMessage = stringResource(R.string.dr_saved)
+    val saveSnackbar = remember { SnackbarHostState() }
+    // Start from the current result after recreation; do not replay an old save or retain a dead ViewModel revision.
+    var observedSaveRevision by remember { mutableLongStateOf(state.settingsSave.revision) }
+    LaunchedEffect(state.settingsSave.revision) {
+        if (state.settingsSave.revision > observedSaveRevision) {
+            observedSaveRevision = state.settingsSave.revision
+            saveSnackbar.currentSnackbarData?.dismiss()
+            if (state.settingsSave.successful) saveSnackbar.showSnackbar(savedMessage)
+        }
+    }
     val loading by mainViewModel.isLoading.collectAsStateWithLifecycle()
     val dark = LocalDarkTheme.current
     val palette by ThemeManager.palette.collectAsStateWithLifecycle()
@@ -84,9 +96,6 @@ fun DrSpectScreen(mainViewModel: MainViewModel, dispatchAction: (MainAction) -> 
     var importing by rememberSaveable { mutableStateOf(false) }
     var input by rememberSaveable { mutableStateOf("") }
     var search by rememberSaveable { mutableStateOf("") }
-    var collapseGeneration by rememberSaveable { mutableIntStateOf(0) }
-    var allExpanded by rememberSaveable { mutableStateOf(false) }
-    var openServerGroups by rememberSaveable { mutableStateOf(emptyList<String>()) }
     var themeDialog by rememberSaveable { mutableStateOf(false) }
     var languageDialog by rememberSaveable { mutableStateOf(false) }
     var settingsPanel by rememberSaveable { mutableStateOf<String?>(null) }
@@ -129,12 +138,6 @@ fun DrSpectScreen(mainViewModel: MainViewModel, dispatchAction: (MainAction) -> 
                         Spacer(Modifier.weight(1f))
                         ActionIcon(R.drawable.dr_globe, R.string.dr_language) { languageDialog = true }
                     } else if (tab == 1) {
-                        ActionIcon(R.drawable.ic_expand_more_24dp,
-                            if (openServerGroups.isNotEmpty()) R.string.dr_collapse else R.string.dr_expand_all, rotation = if (openServerGroups.isNotEmpty()) 180f else 0f) {
-                            allExpanded = openServerGroups.isEmpty()
-                            openServerGroups = if (allExpanded) state.groups.map { it.id } else emptyList()
-                            collapseGeneration++
-                        }
                         ActionIcon(R.drawable.dr_refresh, R.string.dr_refresh, !loading) { onAction(MainAction.UpdateSubscriptions) }
                         PingActions(state, onAction)
                         ActionIcon(R.drawable.ic_add_24dp, R.string.dr_add, prominent = true) { importing = true }
@@ -235,9 +238,7 @@ fun DrSpectScreen(mainViewModel: MainViewModel, dispatchAction: (MainAction) -> 
                         val homeGroup = state.selectedServerSummary?.subscriptionId?.takeIf { it.isNotBlank() } ?: state.selectedGroupId
                         state.groups.firstOrNull { it.id == homeGroup && state.accounts[it.id]?.showOnHome != false }?.let { provider ->
                             Text(stringResource(R.string.dr_current_provider), color = muted, fontSize = 12.sp)
-                            key(provider.id) { ProviderCard(provider.id, provider.remarks, state, mainViewModel, glass, border, collapseGeneration, onAction, onNavigate, allExpanded, if (tab == 1) state.category else ServerCategory.ALL, tab == 1) { expanded ->
-                                if (tab == 1) openServerGroups = if (expanded) (openServerGroups + provider.id).distinct() else openServerGroups - provider.id
-                            } }
+                            key(provider.id) { ProviderCard(provider.id, provider.remarks, state, mainViewModel, glass, border, onAction, onNavigate, if (tab == 1) state.category else ServerCategory.ALL, tab == 1) }
                         }
                         ImportActions(loading, { importing = true }, onAction)
                     }
@@ -263,9 +264,7 @@ fun DrSpectScreen(mainViewModel: MainViewModel, dispatchAction: (MainAction) -> 
                             Text(stringResource(R.string.dr_empty), color = muted)
                         }
                         state.groups.forEach { provider -> key(provider.id) {
-                            ProviderCard(provider.id, provider.remarks, state, mainViewModel, glass, border, collapseGeneration, onAction, onNavigate, allExpanded, if (tab == 1) state.category else ServerCategory.ALL, tab == 1) { expanded ->
-                                if (tab == 1) openServerGroups = if (expanded) (openServerGroups + provider.id).distinct() else openServerGroups - provider.id
-                            }
+                            ProviderCard(provider.id, provider.remarks, state, mainViewModel, glass, border, onAction, onNavigate, if (tab == 1) state.category else ServerCategory.ALL, tab == 1)
                         } }
                         ImportActions(loading, { importing = true }, onAction)
                     }
@@ -339,6 +338,17 @@ fun DrSpectScreen(mainViewModel: MainViewModel, dispatchAction: (MainAction) -> 
                 }
             }
 
+        SnackbarHost(saveSnackbar, Modifier.align(Alignment.BottomCenter)
+            .navigationBarsPadding().padding(start = 24.dp, end = 24.dp, bottom = 88.dp)) { notice ->
+            Snackbar(containerColor = colors.surfaceContainerHigh, contentColor = ink,
+                shape = RoundedCornerShape(20.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Icon(painterResource(R.drawable.dr_notification), null, Modifier.size(24.dp), tint = accent)
+                    Text(notice.visuals.message)
+                }
+            }
+        }
+
         if (importing) AlertDialog(onDismissRequest = { importing = false }, title = { Text(stringResource(R.string.dr_import)) },
             text = { Column(Modifier.verticalScroll(rememberScrollState()).imePadding(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(stringResource(R.string.dr_import_help))
@@ -381,12 +391,11 @@ private fun HomeConnectionButton(selected: Boolean, onClick: () -> Unit, enabled
 
 @Composable
 private fun ProviderCard(id: String, name: String, state: MainUiState, viewModel: MainViewModel,
-    glass: Color, border: Color, collapseGeneration: Int, onAction: (MainAction) -> Unit, onNavigate: (MainDestination) -> Unit,
-    expandAll: Boolean, filterCategory: ServerCategory, showTcp: Boolean, expansionChanged: (Boolean) -> Unit) {
+    glass: Color, border: Color, onAction: (MainAction) -> Unit, onNavigate: (MainDestination) -> Unit,
+    filterCategory: ServerCategory, showTcp: Boolean) {
     val group by viewModel.serverGroupState(id).collectAsStateWithLifecycle()
-    var expanded by rememberSaveable(id, collapseGeneration) { mutableStateOf(expandAll) }
+    var expanded by rememberSaveable(id) { mutableStateOf(false) }
     LaunchedEffect(filterCategory) { if (filterCategory != ServerCategory.ALL) expanded = true }
-    LaunchedEffect(expanded) { expansionChanged(expanded) }
     var menu by rememberSaveable(id) { mutableStateOf(false) }
     var providerSettings by rememberSaveable(id) { mutableStateOf(false) }
     var providerShare by rememberSaveable(id) { mutableStateOf(false) }
@@ -531,7 +540,7 @@ private fun ProviderCard(id: String, name: String, state: MainUiState, viewModel
         ActionIcon(R.drawable.dr_qr, R.string.dr_scan, !loading) { onAction(MainAction.ImportQRcode) }
     }
 }
-private val LocalButtonFeedback = compositionLocalOf<() -> Unit> { {} }
+internal val LocalButtonFeedback = compositionLocalOf<() -> Unit> { {} }
 
 @Composable private fun ActionIcon(icon: Int, label: Int, enabled: Boolean = true, prominent: Boolean = false, rotation: Float = 0f, click: () -> Unit) {
     val feedback = LocalButtonFeedback.current

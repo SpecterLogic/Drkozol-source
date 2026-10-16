@@ -1,5 +1,7 @@
 package com.v2ray.ang.ui.main
 
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -31,8 +33,14 @@ import com.v2ray.ang.handler.ClientPreferences
 @Composable
 internal fun ClientSheet(title: String, dismiss: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
     val height = LocalConfiguration.current.screenHeightDp.dp
+    val feedback = LocalButtonFeedback.current
     Dialog(onDismissRequest = dismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Box(Modifier.fillMaxSize().imePadding(), contentAlignment = Alignment.BottomCenter) {
+            // The dialog window fills the display: dismiss from the backdrop, not from the form.
+            Box(Modifier.matchParentSize().clickable(
+                interactionSource = remember { MutableInteractionSource() }, indication = null,
+                onClickLabel = stringResource(R.string.dr_dismiss),
+                onClick = { feedback(); dismiss() }))
             Surface(shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
                 color = MaterialTheme.colorScheme.surfaceContainer,
                 modifier = Modifier.fillMaxWidth().heightIn(max = height * .9f)) {
@@ -42,7 +50,7 @@ internal fun ClientSheet(title: String, dismiss: () -> Unit, content: @Composabl
                         .background(MaterialTheme.colorScheme.primary.copy(alpha = .4f), RoundedCornerShape(3.dp)))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(title, Modifier.weight(1f), style = MaterialTheme.typography.titleLarge)
-                        IconButton(onClick = dismiss) {
+                        IconButton(onClick = { feedback(); dismiss() }) {
                             Icon(painterResource(R.drawable.dr_dismiss), stringResource(R.string.dr_dismiss))
                         }
                     }
@@ -55,8 +63,9 @@ internal fun ClientSheet(title: String, dismiss: () -> Unit, content: @Composabl
 
 @Composable
 private fun PreferenceToggle(title: String, value: Boolean, change: (Boolean) -> Unit) {
+    val feedback = LocalButtonFeedback.current
     Row(Modifier.fillMaxWidth().semantics(mergeDescendants = true) {}
-        .toggleable(value, role = Role.Switch, onValueChange = change)
+        .toggleable(value, role = Role.Switch, onValueChange = { feedback(); change(it) })
         .insetSelection(value, RoundedCornerShape(16.dp), MaterialTheme.colorScheme.surfaceContainer, MaterialTheme.colorScheme.primary)
         .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically) {
@@ -67,6 +76,7 @@ private fun PreferenceToggle(title: String, value: Boolean, change: (Boolean) ->
 
 @Composable
 internal fun ClientPreferencesSheet(panel: String, state: MainUiState, onAction: (MainAction) -> Unit, dismiss: () -> Unit) {
+    val feedback = LocalButtonFeedback.current
     var choices by rememberSaveable(panel) { mutableStateOf(state.preferences.options.mapKeys { it.key.name }) }
     var minutes by rememberSaveable(panel) { mutableLongStateOf(state.preferences.updateMinutes) }
     var pingUrl by rememberSaveable(panel) { mutableStateOf(state.preferences.pingUrl) }
@@ -131,7 +141,7 @@ internal fun ClientPreferencesSheet(panel: String, state: MainUiState, onAction:
         }
         if (panel == "appearance") {
             listOf("default" to R.string.dr_icon_default, "ocean" to R.string.dr_palette_ocean, "sakura" to R.string.dr_palette_japan).forEach { (id, label) ->
-                Row(Modifier.fillMaxWidth().selectable(icon == id, role = Role.RadioButton, onClick = { icon = id })
+                Row(Modifier.fillMaxWidth().selectable(icon == id, role = Role.RadioButton, onClick = { feedback(); icon = id })
                     .padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
                     RadioButton(icon == id, onClick = null)
                     Text(stringResource(label))
@@ -195,10 +205,11 @@ internal fun ProviderSettingsSheet(id: String, item: SubscriptionItem, state: Ma
 
 @Composable
 private fun IntervalChoices(minutes: Long, select: (Long) -> Unit) {
+    val feedback = LocalButtonFeedback.current
     listOf(listOf(30L, 60L, 120L), listOf(360L, 720L, 1440L)).forEach { row ->
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             row.forEach { value ->
-                FilterChip(minutes == value, onClick = { select(value) }, modifier = Modifier.weight(1f)
+                FilterChip(minutes == value, onClick = { feedback(); select(value) }, modifier = Modifier.weight(1f)
                     .insetSelection(minutes == value, RoundedCornerShape(12.dp), MaterialTheme.colorScheme.surfaceContainer, MaterialTheme.colorScheme.primary),
                     colors = FilterChipDefaults.filterChipColors(containerColor = androidx.compose.ui.graphics.Color.Transparent, selectedContainerColor = androidx.compose.ui.graphics.Color.Transparent),
                     label = { Text(if (value >= 60) stringResource(R.string.dr_hours, value / 60) else stringResource(R.string.dr_interval_minutes, value)) })
@@ -209,9 +220,10 @@ private fun IntervalChoices(minutes: Long, select: (Long) -> Unit) {
 
 @Composable
 private fun ChoiceButtons(title: Int, value: String, options: List<Pair<String, Int>>, select: (String) -> Unit) {
+    val feedback = LocalButtonFeedback.current
     Text(stringResource(title), style = MaterialTheme.typography.titleSmall)
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        options.forEach { (id, label) -> FilterChip(value == id, onClick = { select(id) },
+        options.forEach { (id, label) -> FilterChip(value == id, onClick = { feedback(); select(id) },
             modifier = Modifier.insetSelection(value == id, RoundedCornerShape(12.dp), MaterialTheme.colorScheme.surfaceContainer, MaterialTheme.colorScheme.primary),
             colors = FilterChipDefaults.filterChipColors(containerColor = androidx.compose.ui.graphics.Color.Transparent, selectedContainerColor = androidx.compose.ui.graphics.Color.Transparent),
             label = { Text(stringResource(label)) }) }

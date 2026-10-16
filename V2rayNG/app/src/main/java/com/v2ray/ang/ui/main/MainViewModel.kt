@@ -363,7 +363,6 @@ class MainViewModel(
                     val saved = dataSource.saveProvider(action.id, action.provider)
                     _uiState.update { it.withSettingsSave(action.id, saved).copy(providerSavedId = if (saved) action.id else null) }
                     if (saved) {
-                        toastSuccess(R.string.dr_saved)
                         setupGroupTab(forceRefresh = true).join()
                     }
                 } catch (error: Exception) {
@@ -466,7 +465,6 @@ class MainViewModel(
             try {
                 val saved = dataSource.saveClientPreferences(value)
                 _uiState.update { it.withSettingsSave("preferences", saved).copy(preferences = if (saved) value else it.preferences) }
-                if (saved) toastSuccess(R.string.dr_saved)
             } catch (error: Exception) {
                 if (error is CancellationException) throw error
                 LogUtil.e(AppConfig.TAG, "Client preferences save failed", error)

@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -32,14 +33,15 @@ import com.v2ray.ang.handler.ClientPreferences
 /** Stable Dialog-based bottom sheet, with one scroll/IME/inset owner for every form control. */
 @Composable
 internal fun ClientSheet(title: String, dismiss: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
+    val dismissLabel = stringResource(R.string.dr_dismiss)
     val height = LocalConfiguration.current.screenHeightDp.dp
     val feedback = LocalButtonFeedback.current
     Dialog(onDismissRequest = dismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Box(Modifier.fillMaxSize().imePadding(), contentAlignment = Alignment.BottomCenter) {
             // The dialog window fills the display: dismiss from the backdrop, not from the form.
-            Box(Modifier.matchParentSize().clickable(
+            Box(Modifier.matchParentSize().semantics { contentDescription = dismissLabel }.clickable(
                 interactionSource = remember { MutableInteractionSource() }, indication = null,
-                onClickLabel = stringResource(R.string.dr_dismiss),
+                onClickLabel = dismissLabel,
                 onClick = { feedback(); dismiss() }))
             Surface(shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
                 color = MaterialTheme.colorScheme.surfaceContainer,

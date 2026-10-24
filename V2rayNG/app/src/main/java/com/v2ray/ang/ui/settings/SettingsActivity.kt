@@ -167,7 +167,6 @@ fun SettingsScreen(
     var dynamicColor by rememberMmkvBool(AppConfig.PREF_DYNAMIC_COLOR, true)
 
     var ipv6Enabled by rememberMmkvBool(AppConfig.PREF_IPV6_ENABLED, false)
-    var preferIpv6 by rememberMmkvBool(AppConfig.PREF_PREFER_IPV6, false)
     var sniffingEnabled by rememberMmkvBool(AppConfig.PREF_SNIFFING_ENABLED, true)
     var routeOnlyEnabled by rememberMmkvBool(AppConfig.PREF_ROUTE_ONLY_ENABLED, false)
     var remoteDns by rememberMmkvString(AppConfig.PREF_REMOTE_DNS, "")
@@ -314,12 +313,6 @@ fun SettingsScreen(
                     summary = stringResource(R.string.summary_pref_ipv6_enabled),
                     checked = ipv6Enabled,
                     onCheckedChange = { ipv6Enabled = it }
-                )
-                SettingsSwitchItem(
-                    title = stringResource(R.string.title_pref_prefer_ipv6),
-                    summary = stringResource(R.string.summary_pref_prefer_ipv6),
-                    checked = preferIpv6,
-                    onCheckedChange = { preferIpv6 = it }
                 )
                 SettingsSwitchItem(
                     title = stringResource(R.string.title_pref_local_dns_enabled),

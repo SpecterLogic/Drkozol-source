@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="dr_continue_without_sub">Continue without a subscription</string>
+    <string name="dr_ip_preference">Preferred IP family</string>
+    <string name="dr_prefer_ipv4">Prefer IPv4</string>
+    <string name="dr_prefer_ipv6">Prefer IPv6</string>
+    <string name="dr_ip_preference_help">Choose which IP family to try first when connecting to servers. The other family remains available as a fallback.</string>
+    <string name="dr_update_failed">Could not download or verify the update. Check your connection and try again.</string>
+    <string name="dr_update_ready">Update verified and ready to install.</string>
+    <string name="dr_update_install_permission">Allow DrKozol to install updates in Android settings, then tap Install update again.</string>
+    <string name="dr_update_progress">Downloading… %1$d%%</string>
+    <string name="dr_install_update">Install update</string>
+</resources>

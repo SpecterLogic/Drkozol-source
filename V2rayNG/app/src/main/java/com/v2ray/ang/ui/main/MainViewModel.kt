@@ -329,6 +329,7 @@ class MainViewModel(
     // ---------- Action handler ----------
     fun onAction(action: MainAction) {
         when (action) {
+            MainAction.ContinueWithoutSubscription -> savePreferences(uiState.value.preferences, continueWithoutSubscription = true)
             is MainAction.SubmitSubscription -> submitSubscription(action.url)
             is MainAction.SelectCategory -> _uiState.update { it.copy(category = action.category) }
             MainAction.SelectFastestServer -> {
@@ -458,13 +459,14 @@ class MainViewModel(
         }
     }
 
-    private fun savePreferences(value: com.v2ray.ang.handler.ClientPreferences) {
+    private fun savePreferences(value: com.v2ray.ang.handler.ClientPreferences, continueWithoutSubscription: Boolean = false) {
         if (uiState.value.settingsSaveInFlight != null) return
         _uiState.update { it.copy(settingsSaveInFlight = "preferences", preferencesError = false) }
         viewModelScope.launch(ioDispatcher) {
             try {
-                val saved = dataSource.saveClientPreferences(value)
-                _uiState.update { it.withSettingsSave("preferences", saved).copy(preferences = if (saved) value else it.preferences) }
+                val requested = if (continueWithoutSubscription) dataSource.clientPreferences().copy(onboardingCompleted = true) else value
+                val saved = dataSource.saveClientPreferences(requested)
+                _uiState.update { it.withClientPreferencesSave(requested, saved) }
             } catch (error: Exception) {
                 if (error is CancellationException) throw error
                 LogUtil.e(AppConfig.TAG, "Client preferences save failed", error)
@@ -616,11 +618,10 @@ class MainViewModel(
                     cacheMutex.withLock { groupDataCache.clear() }
                 }
                 val subscriptions = dataSource.getSubscriptions()
-                val ready = subscriptions.any { subscription ->
-                    subscription.guid.isNotEmpty() &&
+                val ready = com.v2ray.ang.handler.workspaceAvailable(dataSource.clientPreferences().onboardingCompleted, subscriptions.any { subscription ->
                         (dataSource.getServerGuidList(subscription.guid).isNotEmpty() ||
                             subscription.subscription.usage?.locked(System.currentTimeMillis() / 1000) == true)
-                }
+                })
                 val groups = subscriptions.map {
                     GroupMapItem(id = it.guid, remarks = it.subscription.remarks)
                 }

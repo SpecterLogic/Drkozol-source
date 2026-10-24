@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="dr_continue_without_sub">المتابعة بدون اشتراك</string>
+    <string name="dr_ip_preference">عائلة IP المفضلة</string>
+    <string name="dr_prefer_ipv4">تفضيل IPv4</string>
+    <string name="dr_prefer_ipv6">تفضيل IPv6</string>
+    <string name="dr_ip_preference_help">اختر عائلة IP التي تتم تجربتها أولاً عند الاتصال بالخوادم، مع إبقاء العائلة الأخرى متاحة.</string>
+    <string name="dr_update_failed">تعذر تنزيل التحديث أو التحقق منه. تحقق من الاتصال وحاول مجدداً.</string>
+    <string name="dr_update_ready">تم التحقق من التحديث وهو جاهز للتثبيت.</string>
+    <string name="dr_update_install_permission">اسمح لـ DrKozol بتثبيت التحديثات في إعدادات Android ثم اضغط تثبيت التحديث مجدداً.</string>
+    <string name="dr_update_progress">جارٍ التنزيل… %1$d%%</string>
+    <string name="dr_install_update">تثبيت التحديث</string>
+</resources>

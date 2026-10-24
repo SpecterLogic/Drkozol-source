@@ -24,6 +24,8 @@ data class ClientPreferences(
     val socksPassword: String = "",
     val icon: String = "default",
     val languageCode: String = "auto",
+    val onboardingCompleted: Boolean = false,
+    val ipPreference: String = "auto",
 ) {
     fun enabled(option: ClientOption): Boolean = options[option] ?: option.default
 }
@@ -56,3 +58,10 @@ internal fun validDnsOverride(value: String): Boolean {
         else address.split('.').let { octets -> octets.size == 4 && octets.all { it.toIntOrNull()?.let { number -> number in 0..255 } == true && it.all(Char::isDigit) } }
     }
 }
+
+/** An explicit preference retains dual-stack fallback; automatic preserves existing resolver behavior. */
+internal fun effectiveIpPreference(value: String?, legacyIpv6: Boolean): String =
+    value?.takeIf { it in setOf("auto", "ipv4", "ipv6") } ?: if (legacyIpv6) "ipv6" else "auto"
+
+internal fun workspaceAvailable(completed: Boolean, hasProfilesOrAccount: Boolean): Boolean =
+    completed || hasProfilesOrAccount

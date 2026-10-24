@@ -1,6 +1,6 @@
-# DrKozol Android 1.4.7 corresponding source
+# DrKozol Android 1.4.8 corresponding source
 
-Android 1.4.7 source snapshot. Windows and Linux remain at version 1.4.6. Downloads and feedback:
+Android 1.4.8 corresponding source; Windows and Linux remain at 1.4.6. Downloads and feedback:
 https://github.com/SpecterLogic/Drkozol
 
 The applications and components retain their respective software licenses and
@@ -10,7 +10,7 @@ and artwork without restricting rights granted by those software licenses.
 
 ## Build from the source release archive
 
-Download DrKozol-source-1.4.7.zip from this repository's Releases. The archive
+Download DrKozol-source-1.4.8.zip from this repository's Releases. The archive
 includes the verified Android native compiler inputs and routing data used in the
 release. Signing keys, subscriptions and local settings are excluded.
 
@@ -65,7 +65,7 @@ without replacing the provided source:
 
 ```sh
 git -C AndroidLibXrayLite init
-git -C AndroidLibXrayLite fetch --depth=1 https://github.com/2dust/AndroidLibXrayLite 1f3e2c5df1c248ed42630cee2bf747643d303ecc
+git -C AndroidLibXrayLite fetch --depth=1 https://github.com/2dust/AndroidLibXrayLite 76a6e2172210613fcb4aa32b6de55bcd9452ce43
 git -C AndroidLibXrayLite reset --mixed FETCH_HEAD
 python3 tools/test_xray_compat.py
 python3 tools/build_android_xray.py

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="dr_continue_without_sub">ادامه بدون لینک ساب</string>
+    <string name="dr_ip_preference">نوع IP ترجیحی</string>
+    <string name="dr_prefer_ipv4">ترجیح IPv4</string>
+    <string name="dr_prefer_ipv6">ترجیح IPv6</string>
+    <string name="dr_ip_preference_help">خانوادهٔ IP برای اتصال به سرورها را انتخاب کنید. در صورت نیاز، خانوادهٔ دیگر هم امتحان می‌شود.</string>
+    <string name="dr_update_failed">دریافت یا تأیید آپدیت انجام نشد. اتصال را بررسی و دوباره تلاش کنید.</string>
+    <string name="dr_update_ready">آپدیت تأیید شد و آمادهٔ نصب است.</string>
+    <string name="dr_update_install_permission">در تنظیمات اندروید، اجازهٔ نصب آپدیت را به DrKozol بدهید و دوباره «نصب آپدیت» را بزنید.</string>
+    <string name="dr_update_progress">در حال دریافت… %1$d%%</string>
+    <string name="dr_install_update">نصب آپدیت</string>
+</resources>

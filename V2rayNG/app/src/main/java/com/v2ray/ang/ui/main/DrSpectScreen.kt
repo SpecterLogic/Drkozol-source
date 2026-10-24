@@ -20,6 +20,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
@@ -116,6 +118,9 @@ fun DrSpectScreen(mainViewModel: MainViewModel, dispatchAction: (MainAction) -> 
     val border = accent.copy(alpha = .25f)
     val powerLabel = stringResource(if (state.isRunning) R.string.dr_disconnect else R.string.dr_connect)
     val configuration = LocalConfiguration.current
+    val density = LocalDensity.current
+    var bottomBarHeight by remember { mutableStateOf(84.dp) }
+    val generousLayout = configuration.fontScale > 1.15f || configuration.screenWidthDp < 360
     val compact = configuration.screenHeightDp < 740
     val powerSize = (configuration.screenWidthDp * if (compact) .47f else .5f).coerceIn(168f, 214f).dp
     CompositionLocalProvider(LocalButtonFeedback provides feedback) {
@@ -127,15 +132,14 @@ fun DrSpectScreen(mainViewModel: MainViewModel, dispatchAction: (MainAction) -> 
         if (!themeDialog) Scaffold(containerColor = Color.Transparent, contentColor = ink) { padding ->
             Column(Modifier.fillMaxSize()
                 .padding(padding).consumeWindowInsets(padding).imePadding()
-                .verticalScroll(when (tab) { 1 -> serverScroll; 2 -> settingsScroll; else -> homeScroll }).padding(horizontal = 18.dp, vertical = 12.dp).padding(bottom = if (state.subscriptionReady) 84.dp else 0.dp),
+                .verticalScroll(when (tab) { 1 -> serverScroll; 2 -> settingsScroll; else -> homeScroll }).padding(horizontal = 18.dp, vertical = 12.dp).padding(bottom = if (state.subscriptionReady) bottomBarHeight else 0.dp),
                 verticalArrangement = Arrangement.spacedBy(if (tab == 0 && compact) 8.dp else 16.dp)) {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                FlowRow(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(stringResource(if (!state.subscriptionReady || tab == 0) R.string.app_name else if (tab == 1) R.string.dr_servers else R.string.dr_settings),
-                        if (tab == 0) Modifier else Modifier.weight(1f), color = if (tab == 0) accent else ink,
+                        Modifier.weight(1f).widthIn(min = 140.dp), color = if (tab == 0) accent else ink,
                         fontSize = if (tab == 1) 24.sp else 27.sp, fontWeight = FontWeight.Bold)
                     if (tab == 0) {
                         Spacer(Modifier.width(8.dp))
-                        Spacer(Modifier.weight(1f))
                         ActionIcon(R.drawable.dr_globe, R.string.dr_language) { languageDialog = true }
                     } else if (tab == 1) {
                         ActionIcon(R.drawable.dr_refresh, R.string.dr_refresh, !loading) { onAction(MainAction.UpdateSubscriptions) }
@@ -172,8 +176,12 @@ fun DrSpectScreen(mainViewModel: MainViewModel, dispatchAction: (MainAction) -> 
                                 Text(stringResource(R.string.dr_scan))
                             }
                             Button(onClick = { onAction(MainAction.SubmitSubscription(input.trim())) }, enabled = input.isNotBlank() && !loading,
-                                modifier = Modifier.fillMaxWidth().height(54.dp), shape = RoundedCornerShape(18.dp)) {
+                                modifier = Modifier.fillMaxWidth().heightIn(min = 54.dp), shape = RoundedCornerShape(18.dp)) {
                                 if (loading) CircularProgressIndicator(Modifier.size(20.dp), color = colors.onPrimary) else Text(stringResource(R.string.dr_login))
+                            }
+                            TextButton(onClick = { onAction(MainAction.ContinueWithoutSubscription) }, enabled = !loading,
+                                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+                                Text(stringResource(R.string.dr_continue_without_sub))
                             }
                             LanguageButtons(onAction)
                         }
@@ -183,7 +191,7 @@ fun DrSpectScreen(mainViewModel: MainViewModel, dispatchAction: (MainAction) -> 
                         Column(Modifier.fillMaxWidth().padding(top = if (compact) 4.dp else 24.dp), horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(if (compact) 18.dp else 28.dp)) {
                             ConnectionPower(state, powerSize) { onAction(MainAction.ToggleService) }
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 HomeConnectionButton(selected = state.homeConnectionChoice == HomeConnectionChoice.BEST,
                                     onClick = { onAction(MainAction.ConnectBestServer) }, enabled = !state.isTesting && !state.isConnecting && !state.backgroundTesting && !loading) {
                                     Icon(painterResource(R.drawable.dr_speed), null, Modifier.size(19.dp))
@@ -197,7 +205,7 @@ fun DrSpectScreen(mainViewModel: MainViewModel, dispatchAction: (MainAction) -> 
                             }
                             Text(if (state.isConnecting) stringResource(R.string.dr_connecting) else if (state.backgroundTesting) stringResource(R.string.dr_background_test) else if (state.isTesting) mainViewModel.formatStatus(state.status) else stringResource(if (state.accountLocked) R.string.dr_renew else if (state.isRunning) R.string.dr_connected else if (state.selectedGuid.isNullOrEmpty()) R.string.dr_choose_server else R.string.dr_tap_connect),
                                 color = if (state.isRunning || state.isTesting) accent else muted, fontSize = 19.sp)
-                            if (state.isRunning) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                            if (state.isRunning) FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Metric(stringResource(R.string.dr_download), bytes(state.traffic.downloadPerSecond) + stringResource(R.string.dr_per_second), ink, muted)
                                 Metric(stringResource(R.string.dr_upload), bytes(state.traffic.uploadPerSecond) + stringResource(R.string.dr_per_second), ink, muted)
                                 Metric(stringResource(R.string.dr_session), bytes(state.traffic.sessionBytes), ink, muted)
@@ -308,7 +316,7 @@ fun DrSpectScreen(mainViewModel: MainViewModel, dispatchAction: (MainAction) -> 
                         Section(R.string.dr_application)
                         GlassCard(glass, border) {
                             Column {
-                                listOf(MainDestination.About, MainDestination.BackupRestore).forEachIndexed { index, destination ->
+                                listOf(MainDestination.CheckUpdate, MainDestination.About, MainDestination.BackupRestore).forEachIndexed { index, destination ->
                                     if (index > 0) HorizontalDivider(Modifier.padding(horizontal = 18.dp), color = border)
                                     SettingsRow(destination.iconRes, destination.labelRes) { onNavigate(destination) }
                                 }
@@ -320,8 +328,8 @@ fun DrSpectScreen(mainViewModel: MainViewModel, dispatchAction: (MainAction) -> 
                 } }
             }
         }
-            if (!themeDialog && state.subscriptionReady && WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current) == 0) Box(Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(horizontal = 42.dp, vertical = 8.dp)) {
-                Row(Modifier.fillMaxWidth().shadow(4.dp, RoundedCornerShape(26.dp)).clip(RoundedCornerShape(26.dp)).background(Brush.verticalGradient(listOf(glass.copy(alpha = .96f), glass.copy(alpha = .86f))))
+            if (!themeDialog && state.subscriptionReady && WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current) == 0) Box(Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(horizontal = if (generousLayout) 16.dp else 42.dp, vertical = 8.dp)) {
+                Row(Modifier.fillMaxWidth().onSizeChanged { bottomBarHeight = with(density) { it.height.toDp() } + 16.dp }.shadow(4.dp, RoundedCornerShape(26.dp)).clip(RoundedCornerShape(26.dp)).background(Brush.verticalGradient(listOf(glass.copy(alpha = .96f), glass.copy(alpha = .86f))))
                     .border(1.dp, accent.copy(alpha = .14f), RoundedCornerShape(26.dp)).padding(4.dp)) {
                     listOf(R.string.dr_home to R.drawable.dr_home, R.string.dr_servers to R.drawable.dr_servers,
                         R.string.dr_settings to R.drawable.ic_settings_24dp).forEachIndexed { index, item ->
@@ -339,7 +347,7 @@ fun DrSpectScreen(mainViewModel: MainViewModel, dispatchAction: (MainAction) -> 
             }
 
         SnackbarHost(saveSnackbar, Modifier.align(Alignment.BottomCenter)
-            .navigationBarsPadding().padding(start = 24.dp, end = 24.dp, bottom = 88.dp)) { notice ->
+            .navigationBarsPadding().padding(start = 24.dp, end = 24.dp, bottom = if (state.subscriptionReady) bottomBarHeight else 16.dp)) { notice ->
             Snackbar(containerColor = colors.surfaceContainerHigh, contentColor = ink,
                 shape = RoundedCornerShape(20.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -394,6 +402,7 @@ private fun ProviderCard(id: String, name: String, state: MainUiState, viewModel
     glass: Color, border: Color, onAction: (MainAction) -> Unit, onNavigate: (MainDestination) -> Unit,
     filterCategory: ServerCategory, showTcp: Boolean) {
     val group by viewModel.serverGroupState(id).collectAsStateWithLifecycle()
+    val roomyRows = LocalConfiguration.current.fontScale > 1.2f || LocalConfiguration.current.screenWidthDp < 360
     var expanded by rememberSaveable(id) { mutableStateOf(false) }
     LaunchedEffect(filterCategory) { if (filterCategory != ServerCategory.ALL) expanded = true }
     var menu by rememberSaveable(id) { mutableStateOf(false) }
@@ -404,7 +413,7 @@ private fun ProviderCard(id: String, name: String, state: MainUiState, viewModel
     val account = state.accounts[id]
     val accent = MaterialTheme.colorScheme.primary
     val usage = account?.usage
-    val rows = group.rows.filter { filterCategory == ServerCategory.ALL || serverCategory(it.profile) == filterCategory }
+    val rows = remember(group.rows, filterCategory) { group.rows.filter { filterCategory == ServerCategory.ALL || serverCategory(it.profile) == filterCategory } }
     if (filterCategory != ServerCategory.ALL && rows.isEmpty()) return
     if (providerSettings && account != null) ProviderSettingsSheet(id, account, state, onAction) { providerSettings = false }
     if (providerShare) ClientSheet(stringResource(R.string.dr_share) + " · " + name, { providerShare = false }) {
@@ -420,14 +429,14 @@ private fun ProviderCard(id: String, name: String, state: MainUiState, viewModel
         confirmButton = { TextButton(onClick = { deleteDialog = false; onAction(MainAction.DeleteProvider(id)) }) { Text(stringResource(R.string.dr_delete)) } },
         dismissButton = { TextButton(onClick = { deleteDialog = false }) { Text(stringResource(R.string.dr_cancel)) } })
     GlassCard(glass.copy(alpha = .65f), border) {
-        Column(Modifier.fillMaxWidth().animateContentSize(androidx.compose.animation.core.tween(200)).padding(14.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            FlowRow(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Surface(onClick = { expanded = !expanded; onAction(MainAction.SelectGroup(id)) }, color = Color.Transparent,
-                    modifier = Modifier.weight(1f).semantics { stateDescription = expansionLabel }) {
+                    modifier = Modifier.weight(1f).widthIn(min = 120.dp).semantics { stateDescription = expansionLabel }) {
                     Row(Modifier.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                         Icon(painterResource(R.drawable.ic_expand_more_24dp), null, Modifier.size(20.dp).rotate(if (expanded) 0f else -90f))
                         Spacer(Modifier.width(8.dp))
-                        Text(name, fontWeight = FontWeight.Bold, maxLines = 2)
+                        Text(name, fontWeight = FontWeight.Bold, maxLines = 3, overflow = TextOverflow.Ellipsis)
                     }
                 }
                 account?.let { com.v2ray.ang.handler.effectiveUpdateMinutes(it.customUpdateInterval, it.updateInterval, state.preferences.updateMinutes) }?.takeIf { it > 0 }?.let { Text(stringResource(R.string.dr_hours, it / 60), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 9.sp) }
@@ -449,7 +458,7 @@ private fun ProviderCard(id: String, name: String, state: MainUiState, viewModel
                 }
             }
             if (filterCategory == ServerCategory.ALL) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(stringResource(R.string.dr_days) + ": " + (state.providerDays[id]?.let { NumberFormat.getIntegerInstance().format(it) }
                     ?: stringResource(if (usage?.expire == 0L) R.string.dr_unlimited else R.string.dr_unknown)), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text((usage?.used?.let { bytes(it) } ?: "—") + " / " + (usage?.total?.takeIf { it > 0 }?.let { bytes(it) }
@@ -463,7 +472,7 @@ private fun ProviderCard(id: String, name: String, state: MainUiState, viewModel
                 color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
             account?.announcement?.takeIf { it.isNotBlank() }?.let { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp) }
             if (state.providerLocks[id] == true) Text(stringResource(R.string.dr_renew), color = accent)
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(stringResource(R.string.dr_server_count, group.rows.size), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp)
                 account?.lastUpdated?.takeIf { it > 0 }?.let { Text(DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(it)), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp) }
             }
@@ -475,25 +484,26 @@ private fun ProviderCard(id: String, name: String, state: MainUiState, viewModel
                     val accountInfo = com.v2ray.ang.handler.ProfileEligibility.isAccountInfo(server.profile)
                     val selected = state.selectedGuid == server.guid
                     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(if (selected) accent.copy(alpha = .12f) else Color.Transparent)
+                    FlowRow(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(if (selected) accent.copy(alpha = .12f) else Color.Transparent)
                         .insetSelection(selected, RoundedCornerShape(18.dp), glass, accent)
                         .semantics(mergeDescendants = true) {}
                         .selectable(selected = selected, enabled = !accountInfo, role = Role.RadioButton,
                             onClick = { onAction(MainAction.SelectGroup(id)); onAction(MainAction.SelectServer(server.guid)) })
-                        .padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        .padding(12.dp), maxItemsInEachRow = if (roomyRows) 3 else 4,
+                        verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Box(Modifier.size(38.dp).clip(RoundedCornerShape(12.dp)).background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment = Alignment.Center) {
                             val flag = configurationFlag(server.remarks)
                             if (flag != null) Text(flag, fontSize = 20.sp) else Icon(painterResource(R.drawable.dr_globe), null, Modifier.size(21.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         Spacer(Modifier.width(10.dp))
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text(configurationName(server.remarks), Modifier.fillMaxWidth(), maxLines = 1, fontSize = 15.sp,
+                            Text(configurationName(server.remarks), Modifier.fillMaxWidth(), maxLines = if (roomyRows) 2 else 1, fontSize = 15.sp,
                                 overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Left,
                                 style = LocalTextStyle.current.copy(textDirection = TextDirection.Content))
                             if (accountInfo) Text(stringResource(R.string.dr_account_info), fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             else ProtocolLabel(server.typeDescription)
                         }
-                        if (!accountInfo) Column(Modifier.width(96.dp).padding(start = 8.dp), horizontalAlignment = Alignment.End) {
+                        if (!accountInfo) Column((if (roomyRows) Modifier.fillMaxWidth() else Modifier.width(96.dp)).padding(start = 8.dp), horizontalAlignment = Alignment.End) {
                             val delay = state.realResults[server.guid]
                             Text("● " + (if (account?.displayDelayAs == "status" && delay != null && delay != 0L)
                                 stringResource(if (delay > 0) R.string.dr_connected else R.string.dr_unreachable) else delayText(delay)), fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
@@ -531,10 +541,10 @@ private fun ProviderCard(id: String, name: String, state: MainUiState, viewModel
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         FilledTonalButton(onClick = add, enabled = !loading, shape = RoundedCornerShape(20.dp),
             colors = ButtonDefaults.filledTonalButtonColors(containerColor = MaterialTheme.colorScheme.primary.copy(alpha = .15f), contentColor = MaterialTheme.colorScheme.primary),
-            modifier = Modifier.weight(1f).height(52.dp)) {
+            modifier = Modifier.weight(1f).heightIn(min = 52.dp)) {
             Icon(painterResource(R.drawable.ic_add_24dp), null, Modifier.size(20.dp)); Spacer(Modifier.width(6.dp)); Text(stringResource(R.string.dr_add))
         }
-        FilledTonalButton(onClick = { onAction(MainAction.ImportClipboard) }, enabled = !loading, shape = RoundedCornerShape(20.dp), modifier = Modifier.weight(1f).height(52.dp)) {
+        FilledTonalButton(onClick = { onAction(MainAction.ImportClipboard) }, enabled = !loading, shape = RoundedCornerShape(20.dp), modifier = Modifier.weight(1f).heightIn(min = 52.dp)) {
             Icon(painterResource(R.drawable.dr_clipboard), null, Modifier.size(20.dp)); Spacer(Modifier.width(6.dp)); Text(stringResource(R.string.dr_paste))
         }
         ActionIcon(R.drawable.dr_qr, R.string.dr_scan, !loading) { onAction(MainAction.ImportQRcode) }
@@ -588,8 +598,8 @@ internal val LocalButtonFeedback = compositionLocalOf<() -> Unit> { {} }
 
 @Composable private fun ProtocolLabel(description: String) {
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-    Row(Modifier.clip(RoundedCornerShape(0.dp)), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-        description.split(" / ").forEachIndexed { index, part ->
+    FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(3.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        remember(description) { description.split(" / ") }.forEachIndexed { index, part ->
             if (index > 0) Text("·", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(part.uppercase(java.util.Locale.ROOT), fontSize = 10.sp, maxLines = 1,
                 style = LocalTextStyle.current.copy(textDirection = TextDirection.Ltr), color = when {

@@ -85,6 +85,7 @@ internal fun ClientPreferencesSheet(panel: String, state: MainUiState, onAction:
     var userAgent by rememberSaveable(panel) { mutableStateOf(state.preferences.userAgent) }
     var socksUser by rememberSaveable(panel) { mutableStateOf(state.preferences.socksUser) }
     var socksPassword by rememberSaveable(panel) { mutableStateOf(state.preferences.socksPassword) }
+    var ipPreference by rememberSaveable(panel) { mutableStateOf(state.preferences.ipPreference) }
     var icon by rememberSaveable(panel) { mutableStateOf(state.preferences.icon) }
     var submittedRevision by rememberSaveable(panel) { mutableStateOf<Long?>(null) }
     LaunchedEffect(state.settingsSave, state.settingsSaveInFlight, submittedRevision) {
@@ -119,6 +120,15 @@ internal fun ClientPreferencesSheet(panel: String, state: MainUiState, onAction:
             }
         }
         if (panel == "connection") {
+            Text(stringResource(R.string.dr_ip_preference), style = MaterialTheme.typography.titleSmall)
+            listOf("auto" to R.string.dr_system, "ipv4" to R.string.dr_prefer_ipv4, "ipv6" to R.string.dr_prefer_ipv6).forEach { (id, label) ->
+                Row(Modifier.fillMaxWidth().selectable(ipPreference == id, role = Role.RadioButton,
+                    onClick = { feedback(); ipPreference = id }).padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    RadioButton(ipPreference == id, onClick = null)
+                    Text(stringResource(label), Modifier.weight(1f))
+                }
+            }
+            Text(stringResource(R.string.dr_ip_preference_help), style = MaterialTheme.typography.bodySmall)
             OutlinedButton(onClick = { onAction(MainAction.OpenSystemVpn) }, modifier = Modifier.fillMaxWidth()) {
                 Text(stringResource(R.string.dr_kill_switch))
             }
@@ -153,8 +163,9 @@ internal fun ClientPreferencesSheet(panel: String, state: MainUiState, onAction:
         if (state.preferencesError) Text(stringResource(R.string.dr_settings_invalid), color = MaterialTheme.colorScheme.error)
         Button(enabled = submittedRevision == null, onClick = {
             submittedRevision = state.settingsSave.revision
-            onAction(MainAction.SavePreferences(ClientPreferences(
-                choices.mapKeys { ClientOption.valueOf(it.key) }, minutes, pingUrl, userAgent, socksUser, socksPassword, icon)))
+            onAction(MainAction.SavePreferences(state.preferences.copy(
+                options = choices.mapKeys { ClientOption.valueOf(it.key) }, updateMinutes = minutes, pingUrl = pingUrl,
+                userAgent = userAgent, socksUser = socksUser, socksPassword = socksPassword, icon = icon, ipPreference = ipPreference)))
         }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.dr_save)) }
     }
 }
@@ -224,7 +235,7 @@ private fun IntervalChoices(minutes: Long, select: (Long) -> Unit) {
 private fun ChoiceButtons(title: Int, value: String, options: List<Pair<String, Int>>, select: (String) -> Unit) {
     val feedback = LocalButtonFeedback.current
     Text(stringResource(title), style = MaterialTheme.typography.titleSmall)
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         options.forEach { (id, label) -> FilterChip(value == id, onClick = { feedback(); select(id) },
             modifier = Modifier.insetSelection(value == id, RoundedCornerShape(12.dp), MaterialTheme.colorScheme.surfaceContainer, MaterialTheme.colorScheme.primary),
             colors = FilterChipDefaults.filterChipColors(containerColor = androidx.compose.ui.graphics.Color.Transparent, selectedContainerColor = androidx.compose.ui.graphics.Color.Transparent),

@@ -148,16 +148,26 @@ object SettingsManager {
         socksPassword = MmkvManager.decodeSettingsString(AppConfig.PREF_SOCKS_PASSWORD).orEmpty(),
         icon = MmkvManager.decodeSettingsString("dr_launcher_icon") ?: "default",
         languageCode = MmkvManager.decodeSettingsString(AppConfig.PREF_LANGUAGE) ?: "auto",
+        onboardingCompleted = MmkvManager.decodeSettingsBool("dr_onboarding_completed", false),
+        ipPreference = serverIpPreference(),
     )
+
+    fun serverIpPreference(): String = effectiveIpPreference(
+        MmkvManager.decodeSettingsString("dr_ip_preference"),
+        MmkvManager.decodeSettingsBool(AppConfig.PREF_PREFER_IPV6, false))
 
     fun saveClientPreferences(preferences: ClientPreferences): Boolean {
         if (!validProbeUrl(preferences.pingUrl) || preferences.updateMinutes !in 15..43200 ||
             preferences.userAgent.any { it == '\r' || it == '\n' } ||
             (preferences.enabled(ClientOption.HOTSPOT) && (preferences.socksUser.isBlank() || preferences.socksPassword.isBlank())) ||
-            preferences.icon !in setOf("default", "ocean", "sakura")) return false
+            preferences.icon !in setOf("default", "ocean", "sakura") ||
+            preferences.ipPreference !in setOf("auto", "ipv4", "ipv6")) return false
         val previous = clientPreferences()
         fun write(value: ClientPreferences): Boolean {
             var okay = true
+            okay = MmkvManager.encodeSettings("dr_onboarding_completed", value.onboardingCompleted) && okay
+            okay = MmkvManager.encodeSettings("dr_ip_preference", value.ipPreference) && okay
+            okay = MmkvManager.encodeSettings(AppConfig.PREF_PREFER_IPV6, value.ipPreference == "ipv6") && okay
             ClientOption.entries.forEach { okay = MmkvManager.encodeSettings(it.key, value.enabled(it)) && okay }
             okay = MmkvManager.encodeSettings("dr_update_minutes", value.updateMinutes.toString()) && okay
             okay = MmkvManager.encodeSettings(AppConfig.PREF_DELAY_TEST_URL, value.pingUrl.trim()) && okay

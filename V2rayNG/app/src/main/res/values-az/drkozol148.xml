@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="dr_continue_without_sub">Abunəliksiz davam et</string>
+    <string name="dr_ip_preference">Üstün IP növü</string>
+    <string name="dr_prefer_ipv4">IPv4 üstün olsun</string>
+    <string name="dr_prefer_ipv6">IPv6 üstün olsun</string>
+    <string name="dr_ip_preference_help">Serverə qoşularkən ilk sınanacaq IP növünü seçin. Digər növ ehtiyat olaraq əlçatan qalır.</string>
+    <string name="dr_update_failed">Yeniləməni endirmək və ya yoxlamaq alınmadı. Bağlantını yoxlayıb yenidən cəhd edin.</string>
+    <string name="dr_update_ready">Yeniləmə yoxlanılıb və quraşdırılmağa hazırdır.</string>
+    <string name="dr_update_install_permission">Android ayarlarında DrKozol üçün yeniləmə quraşdırılmasına icazə verin, sonra yenidən quraşdırın.</string>
+    <string name="dr_update_progress">Endirilir… %1$d%%</string>
+    <string name="dr_install_update">Yeniləməni quraşdır</string>
+</resources>

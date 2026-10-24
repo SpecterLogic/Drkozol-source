@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="dr_continue_without_sub">Tiếp tục không cần đăng ký</string>
+    <string name="dr_ip_preference">Loại IP ưu tiên</string>
+    <string name="dr_prefer_ipv4">Ưu tiên IPv4</string>
+    <string name="dr_prefer_ipv6">Ưu tiên IPv6</string>
+    <string name="dr_ip_preference_help">Chọn loại IP được thử trước khi kết nối máy chủ. Loại còn lại vẫn được dùng khi cần.</string>
+    <string name="dr_update_failed">Không thể tải hoặc xác minh bản cập nhật. Kiểm tra kết nối rồi thử lại.</string>
+    <string name="dr_update_ready">Đã xác minh bản cập nhật, sẵn sàng cài đặt.</string>
+    <string name="dr_update_install_permission">Cho phép DrKozol cài bản cập nhật trong cài đặt Android rồi nhấn cài đặt lần nữa.</string>
+    <string name="dr_update_progress">Đang tải… %1$d%%</string>
+    <string name="dr_install_update">Cài bản cập nhật</string>
+</resources>

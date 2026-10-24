@@ -13,41 +13,8 @@ import stat
 import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE_SHA256 = '5a976cc578d1160bfadfac8e91b8ca22dff13b7b58e3560044939633f874cb3c'
-WIREGUARD_SOURCE_SHA256 = '0d9f7d528ac8a9ebf59de128bcad5e2064ccc9f4a57b183e9bea008d18d2c48f'
-WIREGUARD_CLOSE = '''func (tun *netTun) Close() error {
-	tun.stack.RemoveNIC(1)
-	tun.stack.Close()
-	tun.ep.RemoveNotify(tun.notifyHandle)
-	tun.ep.Close()
-
-	if tun.events != nil {
-		close(tun.events)
-	}
-
-	// we don't close incomingPacket, because WriteNotify may be mid-send on it (DNS lookup) and would panic.
-	if tun.closed != nil {
-		close(tun.closed)
-	}
-
-	return nil
-}
-'''
-WIREGUARD_CLOSE_REPLACEMENT = '''func (tun *netTun) Close() error {
-	// Xray teardown and WireGuard's failed TUN reader can both close this device.
-	// Serialize the complete cleanup, including both channels, exactly once.
-	tun.closeOnce.Do(func() {
-		tun.stack.RemoveNIC(1)
-		tun.stack.Close()
-		tun.ep.RemoveNotify(tun.notifyHandle)
-		tun.ep.Close()
-		if tun.events != nil { close(tun.events) }
-		// WriteNotify may still select this channel; never close incomingPacket.
-		if tun.closed != nil { close(tun.closed) }
-	})
-	return nil
-}
-'''
+SOURCE_SHA256 = '01d1808afc8478373a201990c55d0ef2c037939f083a4cde96f29cf04135b7bb'
+WIREGUARD_SOURCE_SHA256 = '7699af76176f60324873476fb62ff652604ed09182336a21762cfe61b308e2ba'
 WIREGUARD_TEST = r'''package wireguard
 
 import (
@@ -61,7 +28,7 @@ import (
 
 func TestDrKozolConcurrentNetTunClose(t *testing.T) {
     for iteration := 0; iteration < 20; iteration++ {
-        dev, _, _, err := CreateNetTUN([]netip.Addr{netip.MustParseAddr("10.23.45.1")}, nil, 1280, false)
+        dev, _, err := CreateNetTUN([]netip.Addr{netip.MustParseAddr("10.23.45.1")}, nil, 1280, nil)
         if err != nil { t.Fatal(err) }
         var callers sync.WaitGroup
         for i := 0; i < 8; i++ {
@@ -77,7 +44,7 @@ func TestDrKozolConcurrentNetTunClose(t *testing.T) {
 }
 
 func TestDrKozolNetTunCloseUnblocksReader(t *testing.T) {
-    dev, _, _, err := CreateNetTUN([]netip.Addr{netip.MustParseAddr("10.23.45.1")}, nil, 1280, false)
+    dev, _, err := CreateNetTUN([]netip.Addr{netip.MustParseAddr("10.23.45.1")}, nil, 1280, nil)
     if err != nil { t.Fatal(err) }
     result := make(chan error, 1)
     go func() {
@@ -156,7 +123,7 @@ def prepare():
     wireguard = (source / 'proxy/wireguard/netstack.go').read_bytes()
     if hashlib.sha256(wireguard).hexdigest() != WIREGUARD_SOURCE_SHA256:
         raise SystemExit('Pinned WireGuard netstack source changed; review close patch before rebuilding')
-    patch_digest = hashlib.sha256((FIELD_REPLACEMENT + CHECK_REPLACEMENT + TEST + WIREGUARD_CLOSE_REPLACEMENT + WIREGUARD_TEST).encode()).hexdigest()
+    patch_digest = hashlib.sha256((module["Version"] + SOURCE_SHA256 + WIREGUARD_SOURCE_SHA256 + FIELD_REPLACEMENT + CHECK_REPLACEMENT + TEST + WIREGUARD_TEST).encode()).hexdigest()
     target = ROOT / 'artifacts/native' / ('xray-compat-' + patch_digest[:12])
     marker = target / '.drkozol-compat.json'
     if not marker.exists():
@@ -176,17 +143,13 @@ def prepare():
         test_path.write_text(TEST, encoding='utf-8')
         wgdir = target / 'proxy/wireguard'
         wgdir.chmod(wgdir.stat().st_mode | stat.S_IWUSR)
-        wgpath = wgdir / 'netstack.go'
-        wgpath.chmod(wgpath.stat().st_mode | stat.S_IWUSR)
-        wgtext = wireguard.decode()
-        if wgtext.count(WIREGUARD_CLOSE) != 1:
-            raise SystemExit('WireGuard cleanup patch context mismatch')
-        wgtext = wgtext.replace('\t"syscall"\n', '\t"syscall"\n\t"sync"\n', 1)
-        wgtext = wgtext.replace('type netTun struct {\n', 'type netTun struct {\n\tcloseOnce sync.Once\n', 1)
-        wgpath.write_text(wgtext.replace(WIREGUARD_CLOSE, WIREGUARD_CLOSE_REPLACEMENT), encoding='utf-8')
+        # v26.10.21 includes upstream's sync.Once cleanup and closes the reader first.
+        # Keep that implementation intact; regression tests guard both properties.
+        if "tun.closeOnce.Do(func()" not in wireguard.decode():
+            raise SystemExit('Pinned upstream idempotent WireGuard cleanup is missing')
         wgtest = wgdir / 'drkozol_close_test.go'
         wgtest.write_text(WIREGUARD_TEST, encoding='utf-8')
-        subprocess.run(['gofmt', '-w', str(path), str(test_path), str(wgpath), str(wgtest)], check=True)
+        subprocess.run(['gofmt', '-w', str(path), str(test_path), str(wgtest)], check=True)
         marker.write_text(json.dumps({'module': module['Path'], 'version': module['Version'], 'upstream_file_sha256': SOURCE_SHA256,
                                      'wireguard_upstream_file_sha256': WIREGUARD_SOURCE_SHA256,
                                      'compatibility_sha256': patch_digest}, indent=2), encoding='utf-8')

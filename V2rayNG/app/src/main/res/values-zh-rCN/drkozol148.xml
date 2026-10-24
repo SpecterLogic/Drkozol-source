@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="dr_continue_without_sub">不使用订阅继续</string>
+    <string name="dr_ip_preference">首选 IP 类型</string>
+    <string name="dr_prefer_ipv4">优先 IPv4</string>
+    <string name="dr_prefer_ipv6">优先 IPv6</string>
+    <string name="dr_ip_preference_help">选择连接服务器时优先尝试的 IP 类型。另一类型仍可作为备用。</string>
+    <string name="dr_update_failed">无法下载或验证更新，请检查网络后重试。</string>
+    <string name="dr_update_ready">更新已验证，可以安装。</string>
+    <string name="dr_update_install_permission">请在 Android 设置中允许 DrKozol 安装更新，然后再次点击安装更新。</string>
+    <string name="dr_update_progress">正在下载… %1$d%%</string>
+    <string name="dr_install_update">安装更新</string>
+</resources>

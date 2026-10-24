@@ -120,6 +120,7 @@ internal fun MainUiState.withProviderSnapshots(
  * All possible user interaction intents
  */
 sealed interface MainAction {
+    data object ContinueWithoutSubscription : MainAction
     data object Initialize : MainAction
     data class SetTheme(val mode: String) : MainAction
     data class SetPalette(val settingId: String) : MainAction
@@ -176,3 +177,8 @@ sealed interface MainAction {
 
     data object LocateHandled : MainAction
 }
+
+/** Entering without a subscription requires a successful persisted choice, never an optimistic UI flag. */
+internal fun MainUiState.withClientPreferencesSave(value: com.v2ray.ang.handler.ClientPreferences, saved: Boolean): MainUiState =
+    withSettingsSave("preferences", saved).copy(preferences = if (saved) value else preferences,
+        subscriptionReady = subscriptionReady || (saved && value.onboardingCompleted))

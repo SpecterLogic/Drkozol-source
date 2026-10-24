@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="dr_continue_without_sub">সাবস্ক্রিপশন ছাড়াই চালিয়ে যান</string>
+    <string name="dr_ip_preference">পছন্দের IP ধরন</string>
+    <string name="dr_prefer_ipv4">IPv4 অগ্রাধিকার</string>
+    <string name="dr_prefer_ipv6">IPv6 অগ্রাধিকার</string>
+    <string name="dr_ip_preference_help">সার্ভারে সংযোগের জন্য প্রথমে কোন IP ধরন ব্যবহার হবে তা বেছে নিন। অন্য ধরনও বিকল্প হিসেবে থাকবে।</string>
+    <string name="dr_update_failed">আপডেট ডাউনলোড বা যাচাই করা যায়নি। সংযোগ পরীক্ষা করে আবার চেষ্টা করুন।</string>
+    <string name="dr_update_ready">আপডেট যাচাই করা হয়েছে, ইনস্টল করার জন্য প্রস্তুত।</string>
+    <string name="dr_update_install_permission">Android সেটিংসে DrKozol-কে আপডেট ইনস্টলের অনুমতি দিন, তারপর আবার ইনস্টল চাপুন।</string>
+    <string name="dr_update_progress">ডাউনলোড হচ্ছে… %1$d%%</string>
+    <string name="dr_install_update">আপডেট ইনস্টল করুন</string>
+</resources>

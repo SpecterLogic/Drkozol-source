@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="dr_continue_without_sub">Продолжить без подписки</string>
+    <string name="dr_ip_preference">Предпочтительный IP</string>
+    <string name="dr_prefer_ipv4">Предпочитать IPv4</string>
+    <string name="dr_prefer_ipv6">Предпочитать IPv6</string>
+    <string name="dr_ip_preference_help">Выберите семейство IP для первой попытки подключения к серверу. Второе остаётся доступным при необходимости.</string>
+    <string name="dr_update_failed">Не удалось скачать или проверить обновление. Проверьте соединение и повторите попытку.</string>
+    <string name="dr_update_ready">Обновление проверено и готово к установке.</string>
+    <string name="dr_update_install_permission">Разрешите DrKozol установку обновлений в настройках Android, затем повторно нажмите кнопку установки.</string>
+    <string name="dr_update_progress">Загрузка… %1$d%%</string>
+    <string name="dr_install_update">Установить обновление</string>
+</resources>

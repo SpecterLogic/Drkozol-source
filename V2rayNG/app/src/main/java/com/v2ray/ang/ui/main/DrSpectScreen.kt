@@ -538,16 +538,25 @@ private fun ProviderCard(id: String, name: String, state: MainUiState, viewModel
     }
 }
 @Composable private fun ImportActions(loading: Boolean, add: () -> Unit, onAction: (MainAction) -> Unit) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    val configuration = LocalConfiguration.current
+    val stackActions = configuration.fontScale > 1.2f || configuration.screenWidthDp < 360
+    FlowRow(Modifier.fillMaxWidth(), maxItemsInEachRow = if (stackActions) 1 else 3,
+        horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         FilledTonalButton(onClick = add, enabled = !loading, shape = RoundedCornerShape(20.dp),
             colors = ButtonDefaults.filledTonalButtonColors(containerColor = MaterialTheme.colorScheme.primary.copy(alpha = .15f), contentColor = MaterialTheme.colorScheme.primary),
-            modifier = Modifier.weight(1f).heightIn(min = 52.dp)) {
+            modifier = (if (stackActions) Modifier.fillMaxWidth() else Modifier.weight(1f)).heightIn(min = 52.dp)) {
             Icon(painterResource(R.drawable.ic_add_24dp), null, Modifier.size(20.dp)); Spacer(Modifier.width(6.dp)); Text(stringResource(R.string.dr_add))
         }
-        FilledTonalButton(onClick = { onAction(MainAction.ImportClipboard) }, enabled = !loading, shape = RoundedCornerShape(20.dp), modifier = Modifier.weight(1f).heightIn(min = 52.dp)) {
+        FilledTonalButton(onClick = { onAction(MainAction.ImportClipboard) }, enabled = !loading, shape = RoundedCornerShape(20.dp), modifier = (if (stackActions) Modifier.fillMaxWidth() else Modifier.weight(1f)).heightIn(min = 52.dp)) {
             Icon(painterResource(R.drawable.dr_clipboard), null, Modifier.size(20.dp)); Spacer(Modifier.width(6.dp)); Text(stringResource(R.string.dr_paste))
         }
-        ActionIcon(R.drawable.dr_qr, R.string.dr_scan, !loading) { onAction(MainAction.ImportQRcode) }
+        if (stackActions) {
+            OutlinedButton(onClick = { onAction(MainAction.ImportQRcode) }, enabled = !loading,
+                shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp)) {
+                Icon(painterResource(R.drawable.dr_qr), null, Modifier.size(20.dp))
+                Spacer(Modifier.width(6.dp)); Text(stringResource(R.string.dr_scan))
+            }
+        } else ActionIcon(R.drawable.dr_qr, R.string.dr_scan, !loading) { onAction(MainAction.ImportQRcode) }
     }
 }
 internal val LocalButtonFeedback = compositionLocalOf<() -> Unit> { {} }

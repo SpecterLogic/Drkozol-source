@@ -1,6 +1,6 @@
 package com.v2ray.ang.ui.main
 
-import android.app.Application
+import com.v2ray.ang.AngApplication
 import androidx.lifecycle.ViewModelStore
 import com.v2ray.ang.R
 import com.v2ray.ang.dto.SubscriptionUpdateResult
@@ -9,11 +9,14 @@ import com.v2ray.ang.dto.entities.SubscriptionCache
 import com.v2ray.ang.dto.entities.SubscriptionItem
 import com.v2ray.ang.enums.EConfigType
 import com.v2ray.ang.handler.ClientPreferences
+import com.v2ray.ang.ui.compose.AppSnackbarManager
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -36,6 +39,10 @@ class MainImportReadinessTest {
     @OptIn(ExperimentalCoroutinesApi::class)
     private fun verifyImport(subscriptionImport: Boolean) = runTest {
         Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
+        // Supply the real in-app notification host instead of invoking Android Toast in a JVM test.
+        val toastHost = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            AppSnackbarManager.messages.collect { }
+        }
         val imported = AtomicBoolean(false)
         val enteredRead = CountDownLatch(1)
         val allowRead = CountDownLatch(1)
@@ -69,12 +76,12 @@ class MainImportReadinessTest {
             }
             whenever(source.getString(R.string.title_import_config_count, 1)).thenReturn("Imported")
             whenever(source.updateConfigViaSub(any())).thenReturn(SubscriptionUpdateResult(configCount = 1, successCount = 1))
-            val vm = MainViewModel(mock<Application>(), source)
+            val vm = MainViewModel(mock<AngApplication>(), source)
             store.put("fixture", vm)
             assertTrue(withContext(Dispatchers.IO) { vm.awaitInitialPage() })
             assertTrue(vm.uiState.value.groups.isEmpty())
             vm.onAction(MainAction.ImportBatchConfig("https://example.invalid/sub"))
-            assertTrue(withContext(Dispatchers.IO) { enteredRead.await(5, TimeUnit.SECONDS) })
+            assertTrue(withContext(Dispatchers.IO) { enteredRead.await(5, TimeUnit.SECONDS) }, "Import must reach the server-list read")
             // Hold the real IO read: completion must not be published while the list is unavailable.
             val prematureCompletion = withContext(Dispatchers.IO) {
                 withTimeoutOrNull(200) { vm.isLoading.first { !it } }
@@ -91,6 +98,7 @@ class MainImportReadinessTest {
         } finally {
             allowRead.countDown()
             store.clear()
+            toastHost.cancel()
             Dispatchers.resetMain()
         }
     }

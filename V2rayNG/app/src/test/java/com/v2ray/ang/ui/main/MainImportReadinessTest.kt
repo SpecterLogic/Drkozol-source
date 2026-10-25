@@ -27,13 +27,13 @@ import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.*
 
-// Test-only main dispatcher replacement; revisit when coroutines-test stabilizes this API.
-@OptIn(ExperimentalCoroutinesApi::class)
 class MainImportReadinessTest {
     @Test fun firstSubscriptionKeepsLoadingUntilRowsAreReadyWithoutSelectingAServer() = verifyImport(subscriptionImport = true)
 
     @Test fun directConfigKeepsLoadingUntilRowsAreReadyWithoutSelectingAServer() = verifyImport(subscriptionImport = false)
 
+    // Test-only dispatcher replacement; remove opt-in when these coroutines-test APIs become stable.
+    @OptIn(ExperimentalCoroutinesApi::class)
     private fun verifyImport(subscriptionImport: Boolean) = runTest {
         Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
         val imported = AtomicBoolean(false)

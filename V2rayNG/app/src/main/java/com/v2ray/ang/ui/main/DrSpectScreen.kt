@@ -357,13 +357,19 @@ fun DrSpectScreen(mainViewModel: MainViewModel, dispatchAction: (MainAction) -> 
             }
         }
 
-        if (importing) AlertDialog(onDismissRequest = { importing = false }, title = { Text(stringResource(R.string.dr_import)) },
-            text = { Column(Modifier.verticalScroll(rememberScrollState()).imePadding(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(stringResource(R.string.dr_import_help))
-                OutlinedTextField(input, { input = it }, label = { Text(stringResource(R.string.dr_link)) }, minLines = 3, maxLines = 7)
-            } }, confirmButton = { TextButton(enabled = input.isNotBlank() && !loading, onClick = {
+        if (importing) ClientSheet(stringResource(R.string.dr_import), { importing = false }) {
+            Text(stringResource(R.string.dr_import_help))
+            OutlinedTextField(input, { input = it }, modifier = Modifier.fillMaxWidth(),
+                label = { Text(stringResource(R.string.dr_link)) }, minLines = 3, maxLines = 7)
+            Button(enabled = input.isNotBlank() && !loading, onClick = {
                 onAction(MainAction.ImportBatchConfig(input.trim())); input = ""; importing = false
-            }) { Text(stringResource(R.string.dr_import)) } }, dismissButton = { TextButton(onClick = { importing = false }) { Text(stringResource(R.string.dr_cancel)) } })
+            }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+                Text(stringResource(R.string.dr_import))
+            }
+            TextButton(onClick = { importing = false }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+                Text(stringResource(R.string.dr_cancel))
+            }
+        }
         settingsPanel?.let { panel -> ClientPreferencesSheet(panel, state, onAction) { settingsPanel = null } }
         if (urlSchemes) ClientSheet(stringResource(R.string.dr_url_schemes), { urlSchemes = false }) {
             Text(stringResource(R.string.dr_url_schemes_help))

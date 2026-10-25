@@ -739,7 +739,7 @@ class MainViewModel(
                     when {
                         count > 0 -> {
                             toast(dataSource.getString(R.string.title_import_config_count, count))
-                            setupGroupTab(forceRefresh = true)
+                            setupGroupTab(forceRefresh = true).join()
                         }
 
                         countSub > 0 -> {
@@ -750,7 +750,7 @@ class MainViewModel(
                                 _uiState.update { it.copy(selectedGroupId = subscription.guid) }
                             }
                             if (updated.any { it.failureCount > 0 }) toastError(R.string.toast_failure)
-                            setupGroupTab(forceRefresh = true)
+                            setupGroupTab(forceRefresh = true).join()
                             refreshSelectedGuid()
                         }
                         else -> toastError(R.string.toast_failure)

@@ -1,7 +1,8 @@
-﻿package com.v2ray.ang.ui.main
+package com.v2ray.ang.ui.main
 
 import android.app.Application
 import androidx.lifecycle.ViewModelStore
+import com.v2ray.ang.R
 import com.v2ray.ang.dto.SubscriptionUpdateResult
 import com.v2ray.ang.dto.entities.ProfileItem
 import com.v2ray.ang.dto.entities.SubscriptionCache
@@ -29,7 +30,11 @@ import org.mockito.kotlin.*
 // Test-only main dispatcher replacement; revisit when coroutines-test stabilizes this API.
 @OptIn(ExperimentalCoroutinesApi::class)
 class MainImportReadinessTest {
-    @Test fun firstSubscriptionKeepsLoadingUntilRowsAreReadyWithoutSelectingAServer() = runTest {
+    @Test fun firstSubscriptionKeepsLoadingUntilRowsAreReadyWithoutSelectingAServer() = verifyImport(subscriptionImport = true)
+
+    @Test fun directConfigKeepsLoadingUntilRowsAreReadyWithoutSelectingAServer() = verifyImport(subscriptionImport = false)
+
+    private fun verifyImport(subscriptionImport: Boolean) = runTest {
         Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
         val imported = AtomicBoolean(false)
         val enteredRead = CountDownLatch(1)
@@ -60,8 +65,9 @@ class MainImportReadinessTest {
             whenever(source.decodeServerConfig("fixture-server")).thenReturn(profile)
             whenever(source.importBatchConfig(anyOrNull(), any(), eq(true))).thenAnswer {
                 imported.set(true)
-                0 to 1
+                if (subscriptionImport) 0 to 1 else 1 to 0
             }
+            whenever(source.getString(R.string.title_import_config_count, 1)).thenReturn("Imported")
             whenever(source.updateConfigViaSub(any())).thenReturn(SubscriptionUpdateResult(configCount = 1, successCount = 1))
             val vm = MainViewModel(mock<Application>(), source)
             store.put("fixture", vm)

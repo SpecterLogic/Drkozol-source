@@ -40,6 +40,12 @@ internal object RealPingExecutionLimiter {
             block()
         }
     }
+
+    /** The native HTTP probe owns its timeout; a separate TCP shortcut rejects slow valid paths. */
+    suspend fun measure(configType: EConfigType, prepare: () -> String?, probe: (String) -> Long): Long {
+        val configuration = prepare()?.takeIf { it.isNotBlank() } ?: return -1L
+        return run(configType) { probe(configuration) }
+    }
 }
 
 /**
@@ -125,27 +131,10 @@ class RealPingWorkerService(
                 retFailure
             }
         }
-        if (!config.configType.isComplexType()
-            && config.configType != EConfigType.HYSTERIA2
-            && config.configType != EConfigType.WIREGUARD
-            && config.alpn?.startsWith("h3") != true
-            && config.server.isNotNullEmpty()
-            && config.serverPort?.toIntOrNull() != null
-        ) {
-            val url = config.server.orEmpty()
-            val port = config.serverPort.orEmpty().toInt()
-            val tcpTime = SpeedtestManager.socketConnectTime(url, port, 1000)
-            if (tcpTime <= -1L) {
-                return retFailure
-            }
-        }
-
-        val configResult = CoreConfigManager.getV2rayConfig4Speedtest(context, guid)
-        if (!configResult.status) {
-            return retFailure
-        }
-        return RealPingExecutionLimiter.run(config.configType) {
-            CoreNativeManager.measureOutboundDelay(configResult.content, SettingsManager.getDelayTestUrlForProfile(guid))
+        return RealPingExecutionLimiter.measure(config.configType, prepare = {
+            CoreConfigManager.getV2rayConfig4Speedtest(context, guid).takeIf { it.status }?.content
+        }) { configuration ->
+            CoreNativeManager.measureOutboundDelay(configuration, SettingsManager.getDelayTestUrlForProfile(guid))
         }
     }
 

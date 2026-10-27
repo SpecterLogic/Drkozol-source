@@ -20,6 +20,12 @@ class ServerSelectionTest {
         assertNull(fastestServerGuid(setOf("a"), emptyMap(), mapOf("a" to -2)))
         assertNull(fastestServerGuid(emptySet(), mapOf("a" to 2), emptyMap()))
     }
+    @Test fun reachableTcpPortCannotOverrideFailedRealConnection() {
+        assertEquals("b", fastestServerGuid(setOf("a", "b"), mapOf("a" to -1), mapOf("a" to 1, "b" to 25)))
+        assertNull(fastestServerGuid(setOf("a"), mapOf("a" to -1), mapOf("a" to 1)))
+        assertNull(fastestServerGuid(setOf("a"), mapOf("a" to -2), mapOf("a" to 1)))
+        assertEquals("a", fastestServerGuid(setOf("a"), mapOf("a" to 0), mapOf("a" to 25)))
+    }
     @Test fun bothProbeKindsKeepIndependentResults() {
         val initial = MainUiState()
         assertTrue(initial.tcpResults.isEmpty())

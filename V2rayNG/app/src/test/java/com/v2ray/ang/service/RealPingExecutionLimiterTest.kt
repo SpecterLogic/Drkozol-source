@@ -7,12 +7,38 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Test
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
 class RealPingExecutionLimiterTest {
+
+    @Test
+    fun nativeProbeOwnsSuccessFailureAndSlowPathResults() = runBlocking {
+        for (delay in listOf(1400L, 8000L, -1L)) {
+            var called = false
+            assertEquals(delay, RealPingExecutionLimiter.measure(EConfigType.VLESS, { "prepared" }) {
+                called = true
+                assertEquals("prepared", it)
+                delay
+            })
+            assertTrue(called)
+        }
+    }
+
+    @Test
+    fun invalidConfigurationNeverStartsNativeProbe() = runBlocking {
+        for (configuration in listOf(null, "", " ")) {
+            var called = false
+            assertEquals(-1L, RealPingExecutionLimiter.measure(EConfigType.VLESS, { configuration }) {
+                called = true
+                10L
+            })
+            assertFalse(called)
+        }
+    }
 
     @Test
     fun customConfigMeasurementsAreSerializedAcrossWorkers() {

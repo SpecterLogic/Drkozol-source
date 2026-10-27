@@ -1023,8 +1023,11 @@ class MainViewModel(
         val eligible = withContext(ioDispatcher) { loadGroup(groupId, true) }
             .filter { !com.v2ray.ang.handler.ProfileEligibility.isAccountInfo(it.profile) && !it.profile.configType.isGroupType() }
             .mapTo(linkedSetOf()) { it.guid }
-        var best = fastestServerGuid(eligible, snapshot.realResults, snapshot.tcpResults)
-        if (best == null && !snapshot.isRunning) {
+        if (eligible.isEmpty()) { toastError(dataSource.getString(R.string.dr_no_healthy_server)); return false }
+        var best = fastestServerGuid(eligible, snapshot.realResults, emptyMap())
+        // Persisted measurements survive server/session changes; only a fresh real probe may
+        // choose a new connection. Do not replace an active tunnel with standalone probes.
+        if (!snapshot.isRunning) {
             if (groupId != uiState.value.selectedGroupId) {
                 subscriptionIdChanged(groupId)
                 kotlinx.coroutines.withTimeoutOrNull(5_000) { uiState.first { it.selectedGroupId == groupId } } ?: return false
@@ -1035,9 +1038,9 @@ class MainViewModel(
                 uiState.first { !it.isTesting }
             } ?: return false
             if (lastCompletedBulk != requestId || finished.selectedGuid != snapshot.selectedGuid) return false
-            best = fastestServerGuid(eligible, finished.realResults, finished.tcpResults)
+            best = fastestServerGuid(eligible, finished.realResults, emptyMap())
         }
-        if (best == null) { toastError(R.string.dr_no_healthy_server); return false }
+        if (best == null) { toastError(dataSource.getString(R.string.dr_no_healthy_server)); return false }
         return updateSelectedGuid(best, HomeConnectionChoice.BEST)
     }
 

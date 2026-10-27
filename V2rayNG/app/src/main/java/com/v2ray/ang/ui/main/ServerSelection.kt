@@ -23,12 +23,12 @@ internal fun validSubscriptionUrl(value: String): Boolean = try {
     uri.scheme.equals("https", true) && !uri.host.isNullOrBlank() && uri.userInfo == null
 } catch (_: Exception) { false }
 
-/** Real HTTP delay is preferred; TCP is a fallback, never a bandwidth promise. */
+/** TCP may fill an unmeasured entry, but cannot override a failed end-to-end probe. */
 internal fun fastestServerGuid(guids: Set<String>, real: Map<String, Long>, tcp: Map<String, Long>): String? {
     fun best(results: Map<String, Long>) = results.entries
         .filter { it.key in guids && it.value > 0 }
         .minWithOrNull(compareBy<Map.Entry<String, Long>> { it.value }.thenBy { it.key })?.key
-    return best(real) ?: best(tcp)
+    return best(real) ?: best(tcp.filterKeys { real[it]?.let { delay -> delay >= 0 } != false })
 }
 
 internal fun MainUiState.withProbeResult(guid: String, delay: Long, kind: ProbeKind): MainUiState =

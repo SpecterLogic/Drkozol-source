@@ -56,8 +56,10 @@ internal static class SmokeTests
             Check(true, "Actual Avalonia Persian home servers settings renders");
             window.RenderThemeGalleryForSmoke();
             await SaveRender(window, 1000, 700, "smoke-theme-gallery.png");
-            Check(window.GetVisualDescendants().OfType<Avalonia.Controls.Shapes.Ellipse>().Count() >= 45,
-                "Theme gallery renders fifteen day/night choices with palette previews");
+            Check(window.GetVisualDescendants().OfType<Avalonia.Controls.Shapes.Ellipse>().Count() >= 63,
+                "Theme gallery renders twenty-one day/night choices with palette previews");
+            var themeLabels = window.GetVisualDescendants().OfType<TextBlock>().Select(t => t.Text).ToList();
+            Check(themeLabels.Contains("تم‌های روشن") && themeLabels.Contains("تم‌های تیره"), "Linux theme gallery separates light and dark categories");
             await window.RenderForSmoke(0, "Dark", "Ocean");
             var backupFile = Utils.GetTempPath("DrKozol-smoke-backup.json");
             try {

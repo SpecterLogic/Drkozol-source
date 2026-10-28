@@ -6,6 +6,9 @@ namespace v2rayN.Desktop;
 internal class Program
 {
     public static EventWaitHandle ProgramStarted;
+    private static ServiceLib.DrKozol.DesktopInstance? _linuxInstance;
+
+    internal static void ListenForActivation(Action activate) => _linuxInstance?.Listen(activate);
 
     // Initialization code. Don't use any Avalonia, third-party APIs or any
     // SynchronizationContext-reliant code before AppMain is called: things aren't initialized
@@ -13,19 +16,30 @@ internal class Program
     [STAThread]
     public static void Main(string[] args)
     {
-        if (OnStartup(args) == false)
+        try
         {
-            Environment.Exit(0);
-            return;
+            if (OnStartup(args) == false) return;
+            BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
         }
-
-        BuildAvaloniaApp()
-            .StartWithClassicDesktopLifetime(args);
+        finally { _linuxInstance?.Dispose(); ProgramStarted?.Dispose(); }
     }
 
     private static bool OnStartup(string[]? Args)
     {
-        if (Utils.IsWindows())
+        if (OperatingSystem.IsLinux())
+        {
+            // Match InitApp's read-only-install fallback before choosing the shared lease identity.
+            if (Environment.GetEnvironmentVariable(Global.LocalAppData) != "1" && !Utils.HasWritePermission())
+                Environment.SetEnvironmentVariable(Global.LocalAppData, "1", EnvironmentVariableTarget.Process);
+            var identity = Utils.GetMd5(Utils.StartupPath());
+            _linuxInstance = new ServiceLib.DrKozol.DesktopInstance("DrKozol.Desktop." + identity);
+            if (!_linuxInstance.IsPrimary)
+            {
+                _linuxInstance.ActivatePrimary().GetAwaiter().GetResult();
+                return false;
+            }
+        }
+        else if (Utils.IsWindows())
         {
             var exePathKey = Utils.GetMd5(Utils.GetExePath());
             var rebootas = (Args ?? []).Any(t => t == Global.RebootAs);

@@ -24,6 +24,14 @@ public partial class App : Application
             {
                 TrayIcon.SetIcons(this, new TrayIcons());
                 desktop.MainWindow = new DrKozol.DrKozolWindow(desktop.Args?.Contains("--smoke-test") == true);
+                desktop.ShutdownMode = ShutdownMode.OnMainWindowClose;
+                if (OperatingSystem.IsLinux()) Program.ListenForActivation(() => Dispatcher.UIThread.Post(() =>
+                {
+                    if (desktop.MainWindow is not DrKozol.DrKozolWindow window || !window.CanActivate) return;
+                    window.Show();
+                    if (window.WindowState == WindowState.Minimized) window.WindowState = WindowState.Normal;
+                    window.Activate();
+                }));
                 base.OnFrameworkInitializationCompleted();
                 return;
             }

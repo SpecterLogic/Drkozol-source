@@ -6,6 +6,7 @@ import io
 import shutil
 import tarfile
 import tempfile
+import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
 EXECUTABLES = {'DrKozol', 'install-tun.sh', 'bin/xray/xray', 'bin/drkozol-awg', 'bin/sing_box/sing-box'}
@@ -36,7 +37,7 @@ def ar_file(path, members):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('input', type=Path)
-    parser.add_argument('--version', default='1.4.6')
+    parser.add_argument('--version', default=ET.parse(ROOT / 'Windows/v2rayN/v2rayN.Desktop/v2rayN.Desktop.csproj').getroot().findtext('./PropertyGroup/Version'))
     parser.add_argument('--output', type=Path, default=ROOT / 'artifacts/packages')
     args = parser.parse_args()
     source = args.input.resolve()

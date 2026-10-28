@@ -13,6 +13,7 @@ namespace v2rayN.Desktop.DrKozol;
 
 public sealed class DrKozolWindow : Window
 {
+    internal bool CanActivate => !_closing;
     private readonly DrKozolController _client = new();
     private readonly Grid _shell = new();
     private readonly ScrollViewer _scroll = new() { HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled };
@@ -228,7 +229,7 @@ public sealed class DrKozolWindow : Window
         _content = new StackPanel { Margin = new Thickness(20, 10, 20, 18), Spacing = 8 };
         _scroll.Content = _content; Grid.SetColumn(_scroll, 1); Grid.SetRow(_scroll, 1); _shell.Children.Add(_scroll);
         if (!_ready) _content.Children.Add(Label(T("در حال راه‌اندازی…", "Starting…"), 18));
-        else if (_client.Accounts.Count == 0) Onboarding();
+        else if (_client.Accounts.Count == 0 && _tab != 2) Onboarding();
         else if (_tab == 2) { if (_themePage) ThemeGallery(); else Settings(); }
         else
         {
@@ -574,8 +575,11 @@ public sealed class DrKozolWindow : Window
         _content.Children.Add(HomeAction(T("خودکار • مطابق سیستم", "Automatic · system appearance"), async () => {
             _client.Config.UiItem.CurrentTheme = "Auto"; await ConfigHandler.SaveConfig(_client.Config); Build();
         }, _client.Config.UiItem.CurrentTheme == "Auto"));
+        foreach (var dark in new[] { false, true })
+        {
+        _content.Children.Add(Section(dark ? T("تم‌های تیره", "Dark themes") : T("تم‌های روشن", "Light themes")));
         var gallery = new WrapPanel { Orientation = Orientation.Horizontal };
-        foreach (var color in DesktopAppearance.Palettes) foreach (var dark in new[] { true, false })
+        foreach (var color in DesktopAppearance.Palettes)
         {
             if (color == "OLED" && !dark) continue;
             var palette = DesktopAppearance.For(dark ? "Dark" : "Light", color);
@@ -590,6 +594,7 @@ public sealed class DrKozolWindow : Window
             AutomationProperties.SetName(button, color + (dark ? " Dark" : " Light")); gallery.Children.Add(button);
         }
         _content.Children.Add(gallery);
+        }
     }
     private Button HomeAction(string label, Func<Task> action, bool selected)
     {

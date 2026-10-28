@@ -178,12 +178,13 @@ class RoutingSettingActivity : HelperBaseComponentActivity() {
     }
 
     private fun export2Clipboard() {
-        val rulesetList = MmkvManager.decodeRoutingRulesets()
-        if (rulesetList.isNullOrEmpty()) {
-            toastError(R.string.toast_failure)
-        } else {
-            Utils.setClipboard(this, JsonUtil.toJson(rulesetList))
-            toastSuccess(R.string.toast_success)
+        lifecycleScope.launch {
+            val link = viewModel.exportProfileLink()
+            if (link == null) toastError(R.string.toast_failure)
+            else {
+                Utils.setClipboard(this@RoutingSettingActivity, link)
+                toastSuccess(R.string.toast_success)
+            }
         }
     }
 }

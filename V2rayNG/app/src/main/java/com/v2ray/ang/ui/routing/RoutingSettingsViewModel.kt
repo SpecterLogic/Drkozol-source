@@ -10,8 +10,18 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.util.UUID
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 class RoutingSettingsViewModel(application: Application) : BaseViewModel(application) {
+    suspend fun exportProfileLink(): String? = withContext(Dispatchers.IO) {
+        MmkvManager.decodeRoutingRulesets()?.takeIf { it.isNotEmpty() }
+            ?.let(com.v2ray.ang.handler.RoutingProfileLink::export)
+    }
+
+    suspend fun importProfileLink(content: String): Boolean = withContext(Dispatchers.IO) {
+        SettingsManager.resetRoutingRulesets(content)
+    }
     private val rulesets: MutableList<RulesetItem> = mutableListOf()
 
     private val _rulesetsFlow = MutableStateFlow<List<RulesetItem>>(emptyList())

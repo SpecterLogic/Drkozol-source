@@ -4,6 +4,11 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
 class MainImportMenuTest {
+    @Test fun routingQrDoesNotRequireASubscription() {
+        val link = "drkozol://routing/add/fixture"
+        assertEquals(MainAction.ImportBatchConfig(link), qrImportAction(link, false))
+        assertEquals(MainAction.ImportBatchConfig(link), qrImportAction(link, true))
+    }
 
     @Test
     fun onboardingQrUsesSubscriptionValidationAndReadyScreenKeepsConfigImports() {

@@ -51,6 +51,16 @@ public static class SmokeTests
             client = window.TestClient;
             client.Config.UiItem.CurrentLanguage = "fa";
             await window.InitializeForSmoke();
+            var routeRules = RoutingProfileLink.FromFields("domain:direct.example", "domain:proxy.example", "domain:blocked.example");
+            Check(await client.SaveRoutingRules(RoutingProfileLink.Export(routeRules)), "Portable routing profile saves");
+            await client.Import(RoutingProfileLink.Export(routeRules));
+            await client.ImportConfigs(RoutingProfileLink.Export(routeRules));
+            Check((await client.CustomRoutingRules()).Count == 3, "Main paste and config imports accept routing links without a subscription");
+            var savedRouting = await ConfigHandler.GetDefaultRouting(client.Config);
+            Check(savedRouting.Id == RoutingProfileLink.ProfileId && savedRouting.RuleNum == 3 &&
+                (await client.CustomRoutingRules()).Select(r => r.OutboundTag).Order().SequenceEqual(new[] { "block", "direct", "proxy" }), "Routing rules persist and selected profile is active");
+            Check(!await client.SaveRoutingRules("drkozol://routing/add/!") && (await client.CustomRoutingRules()).Count == 3,
+                "Malformed routing import preserves saved profile");
             // Keep integration tests away from a user's existing local proxy listener.
             client.Config.Inbound.First(i => i.Protocol == nameof(EInboundProtocol.socks)).LocalPort = Utils.GetFreePort(11808);
             window.Show();
@@ -89,6 +99,11 @@ public static class SmokeTests
             await client.SetTun(false); Check(!client.UseTun, "System proxy mode remains selectable");
             await client.ImportQrImage("");
             Check(!client.Busy && !client.Connected, "Invalid QR file releases loading state without connection");
+            window.RenderThemeForSmoke("Aurora", true);
+            window.UpdateLayout();
+            var themeLabels = VisualChildren(window).OfType<TextBlock>().Select(t => t.Text).ToList();
+            Check(themeLabels.Contains("تم‌های روشن") && themeLabels.Contains("تم‌های تیره"), "Theme gallery separates light and dark categories");
+            Check(new[] { "Aurora", "Sandstone", "Graphite" }.All(name => themeLabels.Any(text => text.StartsWith(name, StringComparison.Ordinal))), "New palettes have visible gallery previews");
             var previewAccount = new SubItem { Id = Guid.NewGuid().ToString("N"), Remarks = "DrKozol Preview", Url = "https://panel.example/sub/preview",
                 Enabled = true, UploadBytes = 0, DownloadBytes = 1024, TotalBytes = 1024 * 1024, ExpiresAt = now + 864000 };
             await SQLiteHelper.Instance.InsertAsync(previewAccount);
@@ -230,7 +245,7 @@ public static class SmokeTests
                         var themeBitmap = new RenderTargetBitmap(1060, 760, 96, 96, PixelFormats.Pbgra32); themeBitmap.Render(window);
                         var themePng = new PngBitmapEncoder(); themePng.Frames.Add(BitmapFrame.Create(themeBitmap));
                         using var themeFile = File.Create(Utils.GetBaseDirectory($"smoke-theme-{color.ToLowerInvariant()}-{(dark ? "dark" : "light")}.png")); themePng.Save(themeFile);
-                        Check(VisualChildren(window).OfType<System.Windows.Shapes.Ellipse>().Count() >= 45, $"WPF {color} {(dark ? "dark" : "light")} gallery has fifteen palette previews");
+                        Check(VisualChildren(window).OfType<System.Windows.Shapes.Ellipse>().Count() >= 63, $"WPF {color} {(dark ? "dark" : "light")} gallery has twenty-one palette previews");
                         Check(!VisualChildren(window).OfType<TextBlock>().Any(t => t.Text.Contains("ThemeChoice", StringComparison.Ordinal)), $"WPF {color} {(dark ? "dark" : "light")} selected theme uses readable label");
 
                     }

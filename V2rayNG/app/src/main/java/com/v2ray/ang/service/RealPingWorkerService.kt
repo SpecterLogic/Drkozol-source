@@ -104,6 +104,10 @@ class RealPingWorkerService(
 
     fun cancel() {
         job.cancel()
+        // The completion coroutine may itself still be queued when cancellation happens.
+        // Shut down the executor here too; running native calls can finish their bounded
+        // cleanup, but a cancelled batch cannot retain idle threads indefinitely.
+        close()
     }
 
     suspend fun cancelAndJoin() {

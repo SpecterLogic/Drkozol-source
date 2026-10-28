@@ -62,4 +62,9 @@
     <string name="dr_protocol_trojan">Trojan</string>
 <string name="dr_split">اسپلیت برنامه‌ها</string>
 <string name="dr_routing">مسیریابی</string>
+    <string name="dr_light_themes">تم‌های روشن</string>
+    <string name="dr_dark_themes">تم‌های تاریک</string>
+    <string name="dr_palette_aurora">Aurora</string>
+    <string name="dr_palette_sandstone">Sandstone</string>
+    <string name="dr_palette_graphite">Graphite</string>
 </resources>

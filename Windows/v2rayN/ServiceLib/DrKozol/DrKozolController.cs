@@ -113,6 +113,34 @@ public sealed class DrKozolController
     public Task<bool> SavePreferences(DesktopPreferences preferences) => _closed ? Task.FromResult(false)
         : _preferencesTask is { IsCompleted: false } ? _preferencesTask : (_preferencesTask = SavePreferencesCore(preferences));
 
+    public async Task<List<RulesItem>> CustomRoutingRules()
+    {
+        var item = await SQLiteHelper.Instance.TableAsync<RoutingItem>().FirstOrDefaultAsync(r => r.Id == RoutingProfileLink.ProfileId);
+        return item is null ? [] : JsonUtils.Deserialize<List<RulesItem>>(item.RuleSet) ?? [];
+    }
+
+    public Task<bool> SaveRoutingRules(string input) => _closed || Busy || Connected ? Task.FromResult(false)
+        : _preferencesTask is { IsCompleted: false } ? Task.FromResult(false) : (_preferencesTask = SaveRoutingRulesCore(input));
+
+    private async Task<bool> SaveRoutingRulesCore(string input)
+    {
+        try
+        {
+            var rules = await Task.Run(() => RoutingProfileLink.Parse(input), _lifetime.Token);
+            await _connection.WaitAsync(_lifetime.Token);
+            try
+            {
+                if (_closed || Connected) return false;
+                await SQLiteHelper.Instance.ActivateRoutingProfileAsync(new RoutingItem { Id = RoutingProfileLink.ProfileId,
+                    Remarks = "DrKozol", Enabled = true, RuleNum = rules.Count, RuleSet = JsonUtils.Serialize(rules), DomainStrategy = "AsIs" });
+                Notice?.Invoke("saved"); Changed?.Invoke(); return true;
+            }
+            finally { _connection.Release(); }
+        }
+        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { return false; }
+        catch (Exception error) { Logging.SaveLog("DrKozol routing import", new Exception(error.GetType().Name)); Notice?.Invoke("settingsError"); return false; }
+    }
+
     private async Task<bool> SavePreferencesCore(DesktopPreferences preferences)
     {
         if (_closed) return false;
@@ -393,6 +421,7 @@ public sealed class DrKozolController
 
     private async Task ImportCore(string input)
     {
+        if (input.Trim().StartsWith(RoutingProfileLink.Prefix, StringComparison.Ordinal)) { await SaveRoutingRules(input); return; }
         if (!AccountUsage.ValidUrl(input)) { Notice?.Invoke("url"); return; }
         if (Busy || Connected) return;
         Notice?.Invoke("clear");
@@ -416,6 +445,7 @@ public sealed class DrKozolController
 
     private async Task ImportConfigsCore(string input)
     {
+        if (input.Trim().StartsWith(RoutingProfileLink.Prefix, StringComparison.Ordinal)) { await SaveRoutingRules(input); return; }
         if (Busy || Connected || Account is null || string.IsNullOrWhiteSpace(input)) return;
         _workBusy = true; Changed?.Invoke();
         try

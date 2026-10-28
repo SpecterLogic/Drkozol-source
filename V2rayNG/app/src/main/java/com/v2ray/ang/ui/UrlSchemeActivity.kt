@@ -5,6 +5,7 @@ import android.net.Uri
 import android.os.Bundle
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.lifecycleScope
+import androidx.activity.viewModels
 import com.v2ray.ang.AppConfig
 import com.v2ray.ang.R
 import com.v2ray.ang.extension.toast
@@ -20,6 +21,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class UrlSchemeActivity : BaseComponentActivity() {
+    private val routingViewModel: com.v2ray.ang.ui.routing.RoutingSettingsViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -31,6 +33,13 @@ class UrlSchemeActivity : BaseComponentActivity() {
                     } else showMain()
                 } else if (action == Intent.ACTION_VIEW) {
                     when (data?.host) {
+                        "routing" -> lifecycleScope.launch(Dispatchers.IO) {
+                            val saved = routingViewModel.importProfileLink(data.toString())
+                            withContext(Dispatchers.Main) {
+                                toast(if (saved) R.string.toast_success else R.string.toast_failure)
+                                showMain()
+                            }
+                        }
                         "install-config" -> {
                             val uri: Uri? = intent.data
                             val shareUrl = uri?.getQueryParameter("url").orEmpty()

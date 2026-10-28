@@ -246,7 +246,8 @@ public sealed class DrKozolWindow : Window
         Grid.SetRow(_scroll, 1); Grid.SetColumn(_scroll, 1); _shell.Children.Add(_scroll);
         _content.Children.Clear(); _content.FlowDirection = FlowDirection.LeftToRight;
         if (!_ready) { _content.Children.Add(Label(T("در حال آماده‌سازی…", "Starting…"), 14, Muted)); _content.Children.Add(_status); return; }
-        var onboard = _client.Account is null || (_client.Profiles.Count == 0 && !AccountUsage.Locked(_client.Account));
+        // Appearance and connection settings remain available before adding a subscription.
+        var onboard = _tab != 2 && (_client.Account is null || (_client.Profiles.Count == 0 && !AccountUsage.Locked(_client.Account)));
         if (onboard) BuildOnboarding();
         else if (_tab == 2) { if (_themePage) BuildThemeGallery(); else BuildSettings(); }
         else
@@ -695,6 +696,7 @@ public sealed class DrKozolWindow : Window
             var admin = Button(T("اجرای مجدد با دسترسی Administrator", "Restart as administrator"), RestartAsAdministrator, !_client.Busy); admin.HorizontalAlignment = HorizontalAlignment.Left; admin.Foreground = Accent; connection.Children.Add(admin);
         }
         _content.Children.Add(Card(connection));
+        _content.Children.Add(Button(T("مسیریابی سایت‌ها و IP", "Site and IP routing"), EditRouting, !_client.Busy && !_client.Connected));
         _content.Children.Add(ClientPreferencesCard());
         var data = new StackPanel();
         data.Children.Add(Button(T("پشتیبان‌گیری", "Back up subscriptions"), () => LocalBackup(false), !_client.Busy && !_client.Connected));
@@ -706,6 +708,54 @@ public sealed class DrKozolWindow : Window
         var panel = Label(T("حجم، انقضا و پیام‌ها از پنل اشتراک شما دریافت می‌شوند.", "Quota, expiry and announcements come from your subscription panel."), 12, Muted); panel.Margin = new Thickness(0, 12, 0, 5); about.Children.Add(panel); _content.Children.Add(Card(about));
     }
 
+
+    private async Task EditRouting()
+    {
+        var rules = await _client.CustomRoutingRules();
+        var advanced = rules.Where(r => !r.Enabled || r.OutboundTag is not ("direct" or "proxy" or "block") ||
+            r.Process?.Count > 0 || r.Protocol?.Count > 0 || !string.IsNullOrWhiteSpace(r.Port) || !string.IsNullOrWhiteSpace(r.Network) ||
+            r.Domain?.Count > 0 && r.Ip?.Count > 0).ToList();
+        var dialog = new Window { Owner = this, Title = T("مسیریابی", "Routing"), Width = 540, Height = 650, Background = Panel, Foreground = Ink };
+        var body = new StackPanel { Margin = new Thickness(20) };
+        body.Children.Add(Label(T("هر دامنه، IP یا CIDR در یک خط. تغییرات با اتصال بعدی اعمال می‌شوند.", "One domain, IP or CIDR per line. Changes apply on the next connection."), 12, Muted));
+        if (advanced.Count > 0) body.Children.Add(Label(T("قواعد پیشرفتهٔ واردشده حفظ می‌شوند.", "Imported advanced rules are retained."), 12, Muted));
+        var fields = new Dictionary<string, TextBox>();
+        foreach (var (tag, label) in new[] { ("direct", T("مستقیم", "Direct")), ("proxy", T("پروکسی", "Proxy")), ("block", T("مسدود", "Block")) })
+        {
+            body.Children.Add(Label(label));
+            var field = new TextBox { Text = string.Join(Environment.NewLine, rules.Except(advanced).Where(r => r.OutboundTag == tag).SelectMany(r => (r.Domain ?? []).Concat(r.Ip ?? []))),
+                AcceptsReturn = true, MinHeight = 80, MaxHeight = 160, VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                Background = Panel, Foreground = Ink, Margin = new Thickness(0, 6, 0, 12) };
+            AutomationProperties.SetName(field, label); fields[tag] = field; body.Children.Add(field);
+        }
+        var error = Label("", 12, Accent); body.Children.Add(error);
+        async Task Import(string input)
+        {
+            if (await _client.SaveRoutingRules(input)) dialog.Close();
+            else error.Text = T("قواعد معتبر نیستند یا ذخیره نشدند.", "Rules are invalid or could not be saved.");
+        }
+        body.Children.Add(Button(T("ذخیره", "Save"), async () => {
+            try { await Import(RoutingProfileLink.Export(advanced.Concat(RoutingProfileLink.FromFields(fields["direct"].Text, fields["proxy"].Text, fields["block"].Text)).ToList())); }
+            catch (Exception) { error.Text = T("حداقل یک قانون معتبر وارد کنید.", "Enter at least one valid rule."); }
+        }));
+        body.Children.Add(Button(T("ورود لینک از کلیپ‌بورد", "Import link from clipboard"), () => Import(Clipboard.GetText())));
+        body.Children.Add(Button(T("ورود از تصویر QR", "Import QR image"), async () => {
+            var picker = new Microsoft.Win32.OpenFileDialog { Filter = "Images|*.png;*.jpg;*.jpeg;*.bmp;*.webp", CheckFileExists = true };
+            if (picker.ShowDialog(dialog) != true) return;
+            var text = await Task.Run(() => new FileInfo(picker.FileName).Length <= 10 * 1024 * 1024 ? QRCodeUtils.ParseBarcode(File.ReadAllBytes(picker.FileName)) : null);
+            if (text is not null) await Import(text);
+            else error.Text = T("QR معتبر پیدا نشد.", "No valid QR found.");
+        }));
+        body.Children.Add(Button(T("کپی لینک پروفایل", "Copy profile link"), () => { Clipboard.SetText(RoutingProfileLink.Export(rules)); return Task.CompletedTask; }, rules.Count > 0));
+        body.Children.Add(Button(T("نمایش QR پروفایل", "Show profile QR"), async () => {
+            var image = await Task.Run(() => QRCodeUtils.GenQRCode(RoutingProfileLink.Export(rules)));
+            var bitmap = new BitmapImage(); using var stream = new MemoryStream(image);
+            bitmap.BeginInit(); bitmap.CacheOption = BitmapCacheOption.OnLoad; bitmap.StreamSource = stream; bitmap.EndInit(); bitmap.Freeze();
+            new Window { Owner = dialog, Title = "DrKozol QR", Width = 360, Height = 400, Background = Panel,
+                Content = new Image { Source = bitmap, Margin = new Thickness(20), Stretch = Stretch.Uniform } }.ShowDialog();
+        }, rules.Count > 0));
+        dialog.Content = new ScrollViewer { Content = body, VerticalScrollBarVisibility = ScrollBarVisibility.Auto }; dialog.ShowDialog();
+    }
 
     private async Task LocalBackup(bool restore)
     {
@@ -727,8 +777,11 @@ public sealed class DrKozolWindow : Window
         _content.Children.Add(HomeAction(T("خودکار • مطابق سیستم", "Automatic · system appearance"), async () => {
             _client.Config.UiItem.CurrentTheme = "Auto"; await ConfigHandler.SaveConfig(_client.Config); Build();
         }, _client.Config.UiItem.CurrentTheme == "Auto"));
+        foreach (var dark in new[] { false, true })
+        {
+        Section(dark ? T("تم‌های تیره", "Dark themes") : T("تم‌های روشن", "Light themes"));
         var gallery = new WrapPanel();
-        foreach (var color in DesktopAppearance.Palettes) foreach (var dark in new[] { true, false })
+        foreach (var color in DesktopAppearance.Palettes)
         {
             if (color == "OLED" && !dark) continue;
             var palette = DesktopAppearance.For(dark ? "Dark" : "Light", color);
@@ -743,6 +796,7 @@ public sealed class DrKozolWindow : Window
             button.Content = preview; button.Width = 190; button.Height = 86; gallery.Children.Add(button);
         }
         _content.Children.Add(gallery);
+        }
     }
     private Button HomeAction(string label, Func<Task> action, bool selected)
     {

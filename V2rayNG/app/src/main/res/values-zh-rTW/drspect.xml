@@ -62,4 +62,9 @@
     <string name="dr_protocol_trojan">Trojan</string>
 <string name="dr_split">Split · excluded apps</string>
 <string name="dr_routing">Routing</string>
+    <string name="dr_light_themes">淺色主題</string>
+    <string name="dr_dark_themes">深色主題</string>
+    <string name="dr_palette_aurora">Aurora</string>
+    <string name="dr_palette_sandstone">Sandstone</string>
+    <string name="dr_palette_graphite">Graphite</string>
 </resources>

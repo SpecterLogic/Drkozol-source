@@ -243,13 +243,13 @@ object SettingsManager {
         }
 
         try {
-            val rulesetList = JsonUtil.fromJsonSafe(content, Array<RulesetItem>::class.java)?.toMutableList()
+            val rulesetList = if (RoutingProfileLink.isLink(content)) RoutingProfileLink.parse(content)?.toMutableList()
+                else JsonUtil.fromJsonSafe(content, Array<RulesetItem>::class.java)?.toMutableList()
             if (rulesetList.isNullOrEmpty()) {
                 return false
             }
 
-            resetRoutingRulesetsCommon(rulesetList)
-            return true
+            return resetRoutingRulesetsCommon(rulesetList)
         } catch (e: Exception) {
             LogUtil.e(ANG_PACKAGE, "Failed to reset routing rulesets", e)
             return false
@@ -260,7 +260,7 @@ object SettingsManager {
      * Common method to reset routing rulesets.
      * @param rulesetList The list of rulesets.
      */
-    private fun resetRoutingRulesetsCommon(rulesetList: MutableList<RulesetItem>) {
+    private fun resetRoutingRulesetsCommon(rulesetList: MutableList<RulesetItem>): Boolean {
         val rulesetNew: MutableList<RulesetItem> = mutableListOf()
         MmkvManager.decodeRoutingRulesets()?.forEach { key ->
             if (key.locked == true) {
@@ -269,7 +269,7 @@ object SettingsManager {
         }
 
         rulesetNew.addAll(rulesetList)
-        MmkvManager.encodeRoutingRulesets(rulesetNew)
+        return MmkvManager.encodeSettings(AppConfig.PREF_ROUTING_RULESET, JsonUtil.toJson(rulesetNew))
     }
 
     /**

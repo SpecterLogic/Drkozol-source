@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.Flow
 import java.io.Closeable
 
 interface MainDataSource : Closeable {
+    fun importRoutingProfileLink(content: String): Boolean = false
     val mainServiceEvent: Flow<MainServiceEvent>
 
     fun getSelectedSubscriptionId(): String

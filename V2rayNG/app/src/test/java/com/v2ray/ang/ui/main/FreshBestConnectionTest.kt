@@ -1,6 +1,7 @@
 package com.v2ray.ang.ui.main
 
 import androidx.lifecycle.ViewModelStore
+import androidx.lifecycle.viewModelScope
 import com.v2ray.ang.AngApplication
 import com.v2ray.ang.dto.RealPingResult
 import com.v2ray.ang.dto.TestServiceMessage
@@ -12,6 +13,8 @@ import com.v2ray.ang.enums.EConfigType
 import com.v2ray.ang.handler.ClientPreferences
 import com.v2ray.ang.ui.compose.AppSnackbarManager
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
@@ -21,7 +24,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
@@ -35,15 +38,20 @@ class FreshBestConnectionTest {
     @Test fun reachableTcpAndOldRealResultsCannotRescueFailedFreshConnections() = verifyFreshResult(-1)
     @Test fun cancelledFreshProbeDoesNotSelectACachedServer() = verifyFreshResult(40, cancelled = true)
     @Test fun emptyGroupDoesNotStartAProbeOrSelectAServer() = verifyFreshResult(40, empty = true)
+    @Test fun missingDaemonReplyReleasesTestingWithoutSelectingStaleResults() = verifyFreshResult(40, stalled = true)
+    @Test fun powerCancellationReleasesTestingAndIgnoresLateSuccess() = verifyFreshResult(40, powerCancelled = true)
 
     // Test-only dispatcher replacement; reevaluate when coroutines-test dispatchers become stable.
     @OptIn(ExperimentalCoroutinesApi::class)
-    private fun verifyFreshResult(newDelay: Long, cancelled: Boolean = false, empty: Boolean = false) = runTest {
-        Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
-        val notices = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+    private fun verifyFreshResult(newDelay: Long, cancelled: Boolean = false, empty: Boolean = false,
+        stalled: Boolean = false, powerCancelled: Boolean = false) = runBlocking {
+        val main = UnconfinedTestDispatcher()
+        Dispatchers.setMain(main)
+        val notices = launch(main) {
             AppSnackbarManager.messages.collect { }
         }
         val store = ViewModelStore()
+        var modelJob: Job? = null
         try {
             val events = MutableSharedFlow<MainServiceEvent>(extraBufferCapacity = 16)
             val requested = CompletableDeferred<String>()
@@ -75,25 +83,44 @@ class FreshBestConnectionTest {
                 Unit
             }.whenever(source).sendMsg2TestService(any(), anyOrNull())
             val vm = MainViewModel(mock<AngApplication>(), source)
+            modelJob = vm.viewModelScope.coroutineContext[Job]
             store.put("fixture", vm)
             assertTrue(withContext(Dispatchers.IO) { vm.awaitInitialPage() })
             if (empty) {
                 assertFalse(withContext(Dispatchers.IO) { vm.chooseBestForConnection() })
                 verify(source, never()).sendMsg2TestService(any(), anyOrNull())
                 verify(source, never()).setSelectServer(any())
-                return@runTest
+                return@runBlocking
             }
             assertEquals(1L, vm.uiState.value.realResults["old"])
             val choice = async(Dispatchers.IO) { vm.chooseBestForConnection() }
             val requestId = withContext(Dispatchers.IO) { withTimeout(5000) { requested.await() } }
             assertTrue(vm.uiState.value.isTesting)
             verify(source, never()).setSelectServer(any())
+            if (stalled || powerCancelled) {
+                if (powerCancelled) vm.onAction(MainAction.CancelTesting)
+                else {
+                    main.scheduler.advanceTimeBy(45_001)
+                    main.scheduler.runCurrent()
+                }
+                assertFalse(vm.uiState.value.isTesting)
+                assertFalse(withContext(Dispatchers.IO) { withTimeout(5000) { choice.await() } })
+                events.emit(MainServiceEvent.MeasureConfigSuccess(RealPingResult("fresh", 1), requestId))
+                events.emit(MainServiceEvent.MeasureConfigFinish(requestId))
+                assertEquals("old", vm.uiState.value.selectedGuid)
+                assertFalse(vm.uiState.value.isTesting)
+                verify(source, never()).setSelectServer(any())
+                vm.testAllRealPing()
+                assertTrue(vm.uiState.value.isTesting)
+                vm.cancelAllPing()
+                return@runBlocking
+            }
             if (cancelled) {
                 events.emit(MainServiceEvent.MeasureConfigCancelled(requestId))
                 assertFalse(withContext(Dispatchers.IO) { withTimeout(5000) { choice.await() } })
                 assertEquals("old", vm.uiState.value.selectedGuid)
                 verify(source, never()).setSelectServer(any())
-                return@runTest
+                return@runBlocking
             }
             measurements["old"] = ServerAffiliationInfo(realDelayMillis = -1, tcpDelayMillis = 1)
             measurements["fresh"] = ServerAffiliationInfo(realDelayMillis = newDelay, tcpDelayMillis = 2)
@@ -113,7 +140,8 @@ class FreshBestConnectionTest {
             }
         } finally {
             store.clear()
-            notices.cancel()
+            modelJob?.join()
+            notices.cancelAndJoin()
             Dispatchers.resetMain()
         }
     }

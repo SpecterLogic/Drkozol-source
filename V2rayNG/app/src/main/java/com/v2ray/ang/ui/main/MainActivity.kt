@@ -218,6 +218,11 @@ class MainActivity : HelperBaseComponentActivity() {
     }
 
     private fun handleFabAction() {
+        if (mainViewModel.uiState.value.isTesting) {
+            handoverJob?.cancel()
+            mainViewModel.onAction(MainAction.CancelTesting)
+            return
+        }
         if (handoverJob?.isActive == true) return
         if (mainViewModel.uiState.value.isRunning) {
             LauncherManager.stopService(this)

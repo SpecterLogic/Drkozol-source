@@ -112,6 +112,7 @@ class MainViewModel(
 
     private val testRequests = MainTestRequests()
     private var bulkTestJob: Job? = null
+    private var testDeadline: Job? = null
     private var lastCompletedBulk: String? = null
     private var backgroundRevision: String? = null
     private var connectionDeadline: Job? = null
@@ -202,11 +203,13 @@ class MainViewModel(
 
             is MainServiceEvent.MeasureConfigSuccess -> {
                 val request = testRequests.bulk?.takeIf { it.id == event.requestId } ?: return
+                armTestDeadline()
                 queueTestResult(event.result, request)
             }
 
             is MainServiceEvent.MeasureConfigNotify -> {
                 if (event.requestId == testRequests.bulk?.id) {
+                    armTestDeadline()
                     _uiState.update { it.copy(status = MainStatus.TestProgress(event.progress)) }
                 }
             }
@@ -732,6 +735,11 @@ class MainViewModel(
         launchLoading {
             withContext(ioDispatcher) {
                 try {
+                    if (com.v2ray.ang.handler.RoutingProfileLink.isLink(configText)) {
+                        val saved = dataSource.importRoutingProfileLink(configText)
+                        toast(dataSource.getString(if (saved) R.string.toast_success else R.string.toast_failure))
+                        return@withContext
+                    }
                     val previousSubscriptions = dataSource.getSubscriptions().map { it.guid }.toSet()
                     val (count, countSub) = dataSource.importBatchConfig(
                         configText, uiState.value.selectedGroupId, true
@@ -1088,6 +1096,8 @@ class MainViewModel(
 
     // ---------- Testing ----------
     fun cancelAllPing() {
+        testDeadline?.cancel()
+        testDeadline = null
         bulkTestJob?.cancel()
         bulkTestJob = null
         testRequests.cancelBulk()
@@ -1098,12 +1108,30 @@ class MainViewModel(
     }
 
     private fun resetTestStatus() {
+        if (!testRequests.isTesting) {
+            testDeadline?.cancel()
+            testDeadline = null
+        }
         _uiState.update {
             it.copy(
                 isTesting = testRequests.isTesting,
                 status = if (testRequests.isTesting) MainStatus.Testing
                 else if (it.isRunning) MainStatus.Connected else MainStatus.Disconnected
             )
+        }
+    }
+
+    /** A dead test process must not leave connection controls disabled until force-stop. */
+    private fun armTestDeadline() {
+        testDeadline?.cancel()
+        testDeadline = viewModelScope.launch {
+            // Native probes have a shorter timeout. Progress renews this inactivity deadline,
+            // so a large subscription can finish without an arbitrary total-batch cutoff.
+            delay(45_000)
+            if (testRequests.isTesting) {
+                cancelAllPing()
+                toastError(dataSource.getString(R.string.dr_unreachable))
+            }
         }
     }
 
@@ -1161,6 +1189,7 @@ class MainViewModel(
             }
             dataSource.sendMsg2TestService(message, request.id)
         }
+        armTestDeadline()
     }
 
     private fun cancelPendingTestResults() {
@@ -1175,6 +1204,7 @@ class MainViewModel(
         val requestId = testRequests.beginCurrent(state.selectedGuid)
         _uiState.update { it.copy(isTesting = true, status = MainStatus.Testing, connectedTestGuid = null, connectedTestResult = null) }
         dataSource.testCurrentServerRealPing(requestId)
+        armTestDeadline()
     }
 
     private fun onTestsFinished(requestId: String) {

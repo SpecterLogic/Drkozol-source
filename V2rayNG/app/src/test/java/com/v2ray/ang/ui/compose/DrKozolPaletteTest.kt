@@ -35,7 +35,7 @@ class DrKozolPaletteTest {
 
     @Test
     fun everyPaletteRetainsItsStableSettingId() {
-        assertEquals(setOf("forest", "maroon", "purple", "ocean", "sunset", "oled", "japan", "anime"), DrKozolPalette.entries.map { it.settingId }.toSet())
+        assertEquals(setOf("forest", "maroon", "purple", "ocean", "sunset", "oled", "japan", "anime", "aurora", "sandstone", "graphite"), DrKozolPalette.entries.map { it.settingId }.toSet())
         DrKozolPalette.entries.forEach {
             assertTrue(DrKozolPalette.isValidSetting(it.settingId))
             assertEquals(it, DrKozolPalette.fromSetting(it.settingId))

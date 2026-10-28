@@ -8,6 +8,9 @@ public class PresentationTests
     [Arguments("Forest")]
     [Arguments("Maroon")]
     [Arguments("Purple")]
+    [Arguments("Aurora")]
+    [Arguments("Sandstone")]
+    [Arguments("Graphite")]
     public async Task Palette_RetainsModeAndBlackTitleBar(string palette)
     {
         var dark = DesktopAppearance.For("Dark", palette); var light = DesktopAppearance.For("Light", palette);

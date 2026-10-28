@@ -240,6 +240,8 @@ class MainRepository(
         )
     }
 
+    override fun importRoutingProfileLink(content: String): Boolean = SettingsManager.resetRoutingRulesets(content)
+
     override fun testCurrentServerRealPing(requestId: String) {
         MessageHelper.sendMsg2ServiceForResult(app, AppConfig.MSG_MEASURE_DELAY, requestId) { handled ->
             if (!handled) mainServiceEventChannel.trySend(MainServiceEvent.MeasureDelayCancelled(requestId))

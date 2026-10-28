@@ -11,7 +11,7 @@ import com.v2ray.ang.ui.compose.AppDropdownMenuItems
 import com.v2ray.ang.ui.compose.SelectListDialog
 
 internal fun qrImportAction(value: String, subscriptionReady: Boolean): MainAction =
-    if (subscriptionReady) MainAction.ImportBatchConfig(value)
+    if (subscriptionReady || com.v2ray.ang.handler.RoutingProfileLink.isLink(value)) MainAction.ImportBatchConfig(value)
     else MainAction.SubmitSubscription(value)
 
 private enum class ImportMenuAction(@StringRes val labelRes: Int, val action: MainAction) {

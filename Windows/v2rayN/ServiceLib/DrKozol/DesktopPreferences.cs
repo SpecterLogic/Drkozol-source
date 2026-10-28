@@ -26,7 +26,7 @@ public sealed class DesktopPreferences
     public string Applications { get; set; } = "";
     public string TunnelDns { get; set; } = "";
     public string PingUrl { get; set; } = "https://www.gstatic.com/generate_204";
-    public string UserAgent { get; set; } = "DrKozol/1.4.6";
+    public string UserAgent { get; set; } = "DrKozol/1.5.0";
     public string SortOrder { get; set; } = "ping";
 
     public static readonly DesktopOption[] Options = [

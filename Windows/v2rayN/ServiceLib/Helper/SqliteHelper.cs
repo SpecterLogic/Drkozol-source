@@ -69,6 +69,17 @@ public sealed class SQLiteHelper
         return await _dbAsync.DeleteAsync(model);
     }
 
+    public Task ActivateRoutingProfileAsync(RoutingItem profile) => _dbAsync.RunInTransactionAsync(connection =>
+    {
+        foreach (var existing in connection.Table<RoutingItem>().Where(r => r.IsActive).ToList())
+        {
+            existing.IsActive = false;
+            connection.Update(existing);
+        }
+        profile.IsActive = true;
+        connection.InsertOrReplace(profile);
+    });
+
     public async Task<int> DeleteAllAsync<T>()
     {
         return await _dbAsync.DeleteAllAsync<T>();

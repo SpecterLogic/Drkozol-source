@@ -10,13 +10,19 @@ public static class DesktopAppearance
         using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize");
         return key?.GetValue("AppsUseLightTheme") is not int value || value == 0;
     });
-    public static readonly string[] Palettes = ["Ocean", "Forest", "Maroon", "Purple", "Sunset", "OLED", "Japan", "Anime"];
+    public static readonly string[] Palettes = ["Ocean", "Forest", "Maroon", "Purple", "Sunset", "OLED", "Japan", "Anime", "Aurora", "Sandstone", "Graphite"];
     public static DesktopPalette For(string? themeMode, string? colorName)
     {
         var dark = !string.Equals(themeMode, "Light", StringComparison.OrdinalIgnoreCase);
         var color = colorName?.ToLowerInvariant();
         return (color, dark) switch
         {
+            ("aurora", true) => new("#071C1B", "#102D2B", "#050505", "#092220", "#88E5C8", "#E5FCF4", "#A0C5B9", "#34594E", true),
+            ("aurora", false) => new("#F0FAF5", "#FFFFFF", "#050505", "#E1F2EA", "#00664D", "#10352C", "#486D60", "#B5D4C7", false),
+            ("sandstone", true) => new("#211B14", "#30291E", "#050505", "#231E16", "#E8C585", "#FCF2DC", "#C3B49B", "#5A4D37", true),
+            ("sandstone", false) => new("#FAF5EB", "#FFFFFF", "#050505", "#F0E7D5", "#785313", "#332A1D", "#72624B", "#D8CAB0", false),
+            ("graphite", true) => new("#13171C", "#20262E", "#050505", "#171D25", "#AFC9ED", "#F0F4FA", "#ADB9CA", "#3D4A5B", true),
+            ("graphite", false) => new("#F2F5F9", "#FFFFFF", "#050505", "#E6ECF4", "#355A87", "#202B38", "#596A7D", "#C1CEDD", false),
             (null or "ocean", true) => new("#061923", "#102936", "#050505", "#0B202B", "#70D8EE", "#E4F8FC", "#92B6C2", "#274651", true),
             (null or "ocean", false) => new("#EFFAFF", "#FFFFFF", "#050505", "#E0F0F7", "#006780", "#082C37", "#496C79", "#B8D2DC", false),
             ("sunset", true) => new("#25130D", "#382017", "#050505", "#21120C", "#FFBC8C", "#FFF0E6", "#C8A99A", "#63412D", true),

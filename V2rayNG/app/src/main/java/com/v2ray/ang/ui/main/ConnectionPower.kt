@@ -2,6 +2,7 @@ package com.v2ray.ang.ui.main
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -43,6 +44,16 @@ internal fun ConnectionPower(state: MainUiState, diameter: Dp, action: () -> Uni
     val minimal = state.account?.connectionStyle == "minimal"
     val ringWidth = if (minimal) 4.dp else 10.dp
     var pendingSweep by remember { mutableFloatStateOf(.04f) }
+    var testRotation by remember { mutableFloatStateOf(0f) }
+    LaunchedEffect(state.isTesting) {
+        if (state.isTesting) {
+            val rotation = androidx.compose.animation.core.Animatable(0f)
+            while (true) {
+                rotation.snapTo(0f)
+                rotation.animateTo(360f, tween(1100, easing = LinearEasing)) { testRotation = value }
+            }
+        } else testRotation = 0f
+    }
     LaunchedEffect(state.isConnecting) {
         pendingSweep = .04f
         while (state.isConnecting) {
@@ -54,18 +65,18 @@ internal fun ConnectionPower(state: MainUiState, diameter: Dp, action: () -> Uni
     val progress by animateFloatAsState(if (state.isConnecting) pendingSweep else if (state.isRunning) 1f else 0f,
         tween(420), label = "connection ring")
     val inset by animateFloatAsState(if (state.isRunning && !state.isConnecting) .76f else if (pressed) .80f else .84f, tween(240), label = "power inset")
-    val label = stringResource(if (state.isRunning) R.string.dr_disconnect else R.string.dr_connect)
-    val description = stringResource(if (state.isConnecting) R.string.dr_connecting else if (state.isRunning) R.string.dr_connected else R.string.connection_not_connected)
+    val label = stringResource(if (state.isTesting) R.string.dr_cancel_test else if (state.isRunning) R.string.dr_disconnect else R.string.dr_connect)
+    val description = stringResource(if (state.isTesting) R.string.connection_test_testing else if (state.isConnecting) R.string.dr_connecting else if (state.isRunning) R.string.dr_connected else R.string.connection_not_connected)
     Box(Modifier.size(diameter), contentAlignment = Alignment.Center) {
         Canvas(Modifier.fillMaxSize()) {
             val width = ringWidth.toPx()
             drawCircle(colors.onSurfaceVariant.copy(alpha = .13f), radius = size.minDimension / 2 - width / 2, style = Stroke(width))
-            if (progress > 0f) drawArc(colors.primary, -90f, 360f * progress, false,
+            if (state.isTesting || progress > 0f) drawArc(colors.primary, if (state.isTesting) testRotation - 90f else -90f, if (state.isTesting) 100f else 360f * progress, false,
                 topLeft = Offset(width / 2, width / 2), size = Size(size.width - width, size.height - width),
                 style = Stroke(width, cap = StrokeCap.Round))
         }
-        Surface(onClick = action, interactionSource = interaction, enabled = !state.isConnecting && (state.isRunning ||
-            (!state.isTesting && !state.backgroundTesting && !state.accountLocked && !state.selectedGuid.isNullOrEmpty())),
+        Surface(onClick = action, interactionSource = interaction, enabled = state.isTesting || (!state.isConnecting && (state.isRunning ||
+            (!state.backgroundTesting && !state.accountLocked && !state.selectedGuid.isNullOrEmpty()))),
             shape = CircleShape, color = colors.surfaceContainer,
             shadowElevation = if (state.isRunning || pressed) 0.dp else 5.dp,
             modifier = Modifier.size(diameter * inset).semantics {

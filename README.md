@@ -1,6 +1,6 @@
-# DrKozol Android 1.4.9 corresponding source
+# DrKozol Android and Windows 1.5.0 corresponding source
 
-Android 1.4.9 corresponding source; Windows and Linux remain at 1.4.6. Downloads and feedback:
+Android and Windows 1.5.0 corresponding source; Linux remains at 1.4.6. Downloads and feedback:
 https://github.com/SpecterLogic/Drkozol
 
 The applications and components retain their respective software licenses and
@@ -10,7 +10,7 @@ and artwork without restricting rights granted by those software licenses.
 
 ## Build from the source release archive
 
-Download DrKozol-source-1.4.9.zip from this repository's Releases. The archive
+Download DrKozol-source-1.5.0.zip from this repository's Releases. The archive
 includes the verified Android native compiler inputs and routing data used in the
 release. Signing keys, subscriptions and local settings are excluded.
 

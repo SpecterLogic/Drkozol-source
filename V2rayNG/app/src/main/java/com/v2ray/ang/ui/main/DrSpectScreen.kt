@@ -609,6 +609,9 @@ internal val LocalButtonFeedback = compositionLocalOf<() -> Unit> { {} }
     DrKozolPalette.OLED -> R.string.dr_palette_oled
     DrKozolPalette.JAPAN -> R.string.dr_palette_japan
     DrKozolPalette.ANIME -> R.string.dr_palette_anime
+    DrKozolPalette.AURORA -> R.string.dr_palette_aurora
+    DrKozolPalette.SANDSTONE -> R.string.dr_palette_sandstone
+    DrKozolPalette.GRAPHITE -> R.string.dr_palette_graphite
 })
 
 @Composable private fun ProtocolLabel(description: String) {
@@ -650,42 +653,64 @@ internal val LocalButtonFeedback = compositionLocalOf<() -> Unit> { {} }
 }
 
 @Composable private fun ThemeChoicePage(palette: DrKozolPalette, mode: String, dynamic: Boolean, onAction: (MainAction) -> Unit, dismiss: () -> Unit) {
+    var galleryMode by rememberSaveable { mutableStateOf(if (mode == "1") "1" else "2") }
     androidx.activity.compose.BackHandler(onBack = dismiss)
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = dismiss) {
-                    Icon(painterResource(R.drawable.dr_dismiss), stringResource(R.string.dr_dismiss))
-                }
+                IconButton(onClick = dismiss) { Icon(painterResource(R.drawable.dr_dismiss), stringResource(R.string.dr_dismiss)) }
                 Text(stringResource(R.string.dr_theme), style = MaterialTheme.typography.headlineSmall)
             }
-            Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).selectableGroup().padding(horizontal = 20.dp, vertical = 12.dp)) {
-            Row(Modifier.fillMaxWidth().selectable(selected = dynamic, role = Role.RadioButton,
-                onClick = { onAction(MainAction.UseSystemColors) }).heightIn(min = 64.dp).padding(vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp).selectable(selected = dynamic, role = Role.RadioButton,
+                onClick = { onAction(MainAction.UseSystemColors) }).heightIn(min = 64.dp), verticalAlignment = Alignment.CenterVertically) {
                 RadioButton(dynamic, onClick = null)
                 Text(stringResource(R.string.dr_system), Modifier.weight(1f))
             }
-            DrKozolPalette.entries.forEach { choice ->
-                (if (choice == DrKozolPalette.OLED) listOf("2" to R.string.dr_night) else listOf("1" to R.string.dr_day, "2" to R.string.dr_night)).forEach { (choiceMode, label) ->
-                    val selected = !dynamic && palette == choice && mode == choiceMode
-                    Row(Modifier.fillMaxWidth().selectable(selected = selected, role = Role.RadioButton, onClick = {
-                        onAction(MainAction.SetPalette(choice.settingId)); onAction(MainAction.SetTheme(choiceMode))
-                    }).heightIn(min = 68.dp).padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                        RadioButton(selected, onClick = null)
-                        Column(Modifier.weight(1f)) {
-                            Text(stringResource(R.string.dr_theme_selected, paletteLabel(choice), stringResource(label)))
-                        }
-                        val preview = choice.colors(choiceMode == "2")
-                        Row(Modifier.padding(horizontal = 8.dp), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                            listOf(preview.background, preview.accent, preview.muted).forEach { swatch ->
-                                Box(Modifier.size(12.dp).clip(CircleShape).background(Color(swatch)))
+            Row(Modifier.fillMaxWidth().selectableGroup().padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf("1" to R.string.dr_light_themes, "2" to R.string.dr_dark_themes).forEach { (value, label) ->
+                    val selected = galleryMode == value
+                    val shape = RoundedCornerShape(20.dp)
+                    Box(Modifier.weight(1f).clip(shape).selectable(selected, role = Role.Tab, onClick = { galleryMode = value })
+                        .insetSelection(selected, shape, MaterialTheme.colorScheme.surfaceContainer, MaterialTheme.colorScheme.primary)
+                        .padding(horizontal = 12.dp, vertical = 16.dp), contentAlignment = Alignment.Center) {
+                        Text(stringResource(label), style = MaterialTheme.typography.titleSmall)
+                    }
+                }
+            }
+            BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
+                val columns = if (maxWidth >= 380.dp && androidx.compose.ui.platform.LocalDensity.current.fontScale < 1.3f) 2 else 1
+                val choices = DrKozolPalette.entries.filter { galleryMode == "2" || it != DrKozolPalette.OLED }
+                    .sortedBy { if (it == DrKozolPalette.OCEAN) 0 else it.ordinal + 1 }
+                androidx.compose.runtime.key(galleryMode) {
+                    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).selectableGroup().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        choices.chunked(columns).forEach { row ->
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                row.forEach { choice ->
+                                    androidx.compose.runtime.key(choice.settingId) {
+                                        val selected = !dynamic && palette == choice && mode == galleryMode
+                                        val preview = choice.colors(galleryMode == "2")
+                                        val shape = RoundedCornerShape(22.dp)
+                                        Column(Modifier.weight(1f).clip(shape).selectable(selected, role = Role.RadioButton, onClick = {
+                                            onAction(MainAction.SetPalette(choice.settingId)); onAction(MainAction.SetTheme(galleryMode))
+                                        }).insetSelection(selected, shape, MaterialTheme.colorScheme.surfaceContainer, MaterialTheme.colorScheme.primary)
+                                            .padding(12.dp).semantics(mergeDescendants = true) {}) {
+                                            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Color(preview.background)).padding(14.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                                listOf(preview.accent, preview.surface, preview.muted).forEach { color ->
+                                                    Box(Modifier.size(22.dp).clip(CircleShape).background(Color(color)))
+                                                }
+                                            }
+                                            Row(Modifier.fillMaxWidth().heightIn(min = 52.dp), verticalAlignment = Alignment.CenterVertically) {
+                                                RadioButton(selected, onClick = null)
+                                                Text(stringResource(R.string.dr_theme_selected, paletteLabel(choice), stringResource(if (galleryMode == "2") R.string.dr_night else R.string.dr_day)), Modifier.weight(1f))
+                                            }
+                                        }
+                                    }
+                                }
+                                if (row.size < columns) Spacer(Modifier.weight(1f))
                             }
                         }
                     }
                 }
-            }
-
             }
         }
     }

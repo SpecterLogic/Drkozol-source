@@ -9,6 +9,7 @@ namespace v2rayN;
 public partial class App
 {
     public static EventWaitHandle ProgramStarted;
+    private RegisteredWaitHandle? _activationWait;
 
     public App()
     {
@@ -59,6 +60,15 @@ public partial class App
 
         var mainWindow = new DrKozol.DrKozolWindow();
         MainWindow = mainWindow;
+        ShutdownMode = ShutdownMode.OnMainWindowClose;
+        _activationWait = ThreadPool.RegisterWaitForSingleObject(ProgramStarted, (_, _) =>
+            Dispatcher.BeginInvoke(() =>
+            {
+                if (MainWindow is not { } window) return;
+                window.Show();
+                if (window.WindowState == WindowState.Minimized) window.WindowState = WindowState.Normal;
+                window.Activate();
+            }), null, Timeout.Infinite, false);
         mainWindow.Show();
     }
 
@@ -84,6 +94,7 @@ public partial class App
     protected override void OnExit(ExitEventArgs e)
     {
         Logging.SaveLog("OnExit");
+        _activationWait?.Unregister(null);
         base.OnExit(e);
         ProgramStarted?.Dispose();
     }

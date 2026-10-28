@@ -162,7 +162,8 @@ public sealed partial class DrKozolWindow : Window
         hover.Setters.Add(new Setter(Border.BorderBrushProperty, Accent, "surface"));
         var disabled = new Trigger { Property = IsEnabledProperty, Value = false };
         var pressed = new Trigger { Property = ButtonBase.IsPressedProperty, Value = true };
-        pressed.Setters.Add(new Setter(Border.BackgroundProperty, new LinearGradientBrush(Colors.Black, Panel.Color, 90), "surface"));
+        pressed.Setters.Add(new Setter(Border.BackgroundProperty, AccentTint, "surface"));
+        pressed.Setters.Add(new Setter(Border.BorderBrushProperty, Accent, "surface"));
         disabled.Setters.Add(new Setter(OpacityProperty, .38));
         template.Triggers.Add(hover); template.Triggers.Add(pressed); template.Triggers.Add(disabled); button.Template = template;
         AutomationProperties.SetName(button, text);
@@ -299,7 +300,8 @@ public sealed partial class DrKozolWindow : Window
         {
             var button = Button("", () => { ChangeTab(index); return Task.CompletedTask; }, height: 42);
             button.Content = _sidebarCollapsed ? DrKozolVisuals.Icon(icon, _tab == index ? Accent : Muted, 16) : Inline(icon, T(fa, en), _tab == index ? Accent : Muted);
-            button.Background = _tab == index ? new LinearGradientBrush(Colors.Black, Panel.Color, 90) : Brush(Palette.Sidebar); button.BorderThickness = new Thickness(0);
+            button.Background = _tab == index ? AccentTint : Brush(Palette.Sidebar);
+            button.BorderThickness = _tab == index ? new Thickness(3, 0, 0, 0) : new Thickness(0); button.BorderBrush = Accent;
             button.HorizontalContentAlignment = _sidebarCollapsed ? HorizontalAlignment.Center : HorizontalAlignment.Left;
             button.Margin = new Thickness(0, 2, 0, 2); button.Padding = new Thickness(14, 9, 10, 9);
             button.ToolTip = T(fa, en); AutomationProperties.SetName(button, T(fa, en)); nav.Children.Add(button);
@@ -352,7 +354,7 @@ public sealed partial class DrKozolWindow : Window
         connect.Content = DrKozolVisuals.Icon(_client.Connected ? "shield" : "power", _client.Connected ? Accent : Muted, 39);
         connect.Width = 130; connect.Height = 130; connect.Padding = new Thickness(0); connect.HorizontalAlignment = HorizontalAlignment.Center;
         connect.Margin = new Thickness(0, 63, 0, 28); connect.Background = Panel;
-        if (_client.Connected) connect.Background = new LinearGradientBrush(Colors.Black, Panel.Color, 90);
+        if (_client.Connected) connect.Background = AccentTint;
         var template = new ControlTemplate(typeof(Button)); var border = new FrameworkElementFactory(typeof(Border)); border.Name = "power";
         border.SetValue(Border.CornerRadiusProperty, new CornerRadius(65));
         border.SetValue(Border.BackgroundProperty, new TemplateBindingExtension(BackgroundProperty));
@@ -816,7 +818,8 @@ public sealed partial class DrKozolWindow : Window
     {
         var button = Button(label, action, !_client.Busy, 44);
         button.Foreground = Accent; button.Margin = new Thickness(4);
-        button.Background = selected ? new LinearGradientBrush(Colors.Black, Panel.Color, 90) : Panel;
+        button.Background = selected ? AccentTint : Panel;
+        button.FontWeight = selected ? FontWeights.SemiBold : FontWeights.Normal;
         button.BorderBrush = selected ? Accent : Stroke;
         AutomationProperties.SetHelpText(button, selected ? T("انتخاب شده", "Selected") : "");
         return button;

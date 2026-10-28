@@ -651,6 +651,21 @@ public sealed class DrKozolController
             // Process.Start is not a ready signal. Do not route applications to a listener that
             // has not opened yet; the first request otherwise races native core initialization.
             await WaitForProxyListener();
+            if (profile.DrKozolGeneratedBalancer)
+            {
+                // A SOCKS listener can open before the new balancer has a working TLS route.
+                // Verify fresh connections before handing applications to the new engine.
+                using var ready = CancellationTokenSource.CreateLinkedTokenSource(_lifetime.Token); ready.CancelAfter(TimeSpan.FromSeconds(12));
+                using var http = new HttpClient(new HttpClientHandler { UseProxy = true,
+                    Proxy = new WebProxy($"socks5://127.0.0.1:{AppManager.Instance.GetLocalPort(EInboundProtocol.socks)}") }) { Timeout = TimeSpan.FromSeconds(3) };
+                http.DefaultRequestHeaders.ConnectionClose = true;
+                var url = string.IsNullOrWhiteSpace(owner.ProbeUrl) ? Config.DrKozol.PingUrl : owner.ProbeUrl;
+                await WaitForUsableRoute(async token => {
+                    if (!CoreManager.Instance.IsRunning) throw new IOException();
+                    try { using var response = await http.GetAsync(url, token); return response.IsSuccessStatusCode; }
+                    catch (OperationCanceledException) when (!token.IsCancellationRequested) { return false; }
+                }, ready.Token);
+            }
             if (UseTun || Config.DrKozol.ShareProxy)
             {
                 _tun = new TunHost();
@@ -702,6 +717,18 @@ public sealed class DrKozolController
             catch (System.Net.Sockets.SocketException) { await Task.Delay(100, startup.Token); }
         }
         throw new TimeoutException();
+    }
+
+    public static async Task WaitForUsableRoute(Func<CancellationToken, Task<bool>> probe, CancellationToken token)
+    {
+        var consecutive = 0;
+        while (consecutive < 2)
+        {
+            token.ThrowIfCancellationRequested();
+            try { consecutive = await probe(token) ? consecutive + 1 : 0; }
+            catch (HttpRequestException error) { consecutive = 0; Logging.SaveLog("DrKozol balancer route readiness", new Exception(error.GetType().Name)); }
+            if (consecutive < 2) await Task.Delay(250, token);
+        }
     }
 
     private async Task StopCore()

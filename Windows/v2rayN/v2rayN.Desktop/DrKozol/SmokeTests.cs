@@ -84,6 +84,8 @@ internal static class SmokeTests
                 await client.SetTun(true); client.Account!.SortOrder = "name";
                 var cancelledProbe = client.Probe(true, candidates);
                 await window.RenderForSmoke(0, "Dark", "ocean");
+                await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Loaded);
+                window.UpdateLayout();
                 var stopPower = window.GetVisualDescendants().OfType<Button>().First(b => Avalonia.Automation.AutomationProperties.GetName(b) is "Stop tests" or "توقف تست");
                 Check(stopPower.IsEnabled, "Linux power remains enabled while testing");
                 stopPower.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent)); await cancelledProbe;

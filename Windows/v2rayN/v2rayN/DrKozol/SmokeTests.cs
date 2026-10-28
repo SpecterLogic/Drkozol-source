@@ -269,6 +269,7 @@ public static class SmokeTests
                 client.Account!.SortOrder = "name";
                 var cancelledProbe = client.Probe(true, candidates);
                 window.RenderForSmoke(0, true);
+                window.UpdateLayout();
                 var stopPower = VisualChildren(window).OfType<Button>().First(b => System.Windows.Automation.AutomationProperties.GetName(b) is "Stop tests" or "توقف تست");
                 Check(stopPower.IsEnabled, "Power remains enabled during latency testing");
                 stopPower.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); await cancelledProbe;

@@ -114,6 +114,8 @@ public sealed class DrKozolWindow : Window
         "upToDate" => T("نسخهٔ جدیدتری برای این دستگاه موجود نیست", "No newer version is available for this device"),
         "updateAvailable" => T("نسخهٔ جدید آمادهٔ دریافت است", "A new version is available"),
         "updateError" => T("بررسی نسخهٔ جدید انجام نشد", "Could not check for updates"),
+        "updateDownloading" => T("در حال دانلود نسخهٔ جدید…", "Downloading update…"),
+        "updateDownloaded" => T("نسخهٔ جدید دانلود شد و صحت فایل تأیید شد", "Update downloaded and verified"),
         "saved" => T("ذخیره شد", "Saved"),
         "updated" => T("اشتراک‌ها به‌روز شدند", "Subscriptions updated"),
         "balancerUnavailable" => T("حداقل دو سرور سازگار نیاز است", "At least two compatible servers are required"),
@@ -229,14 +231,14 @@ public sealed class DrKozolWindow : Window
         _content = new StackPanel { Margin = new Thickness(20, 10, 20, 18), Spacing = 8 };
         _scroll.Content = _content; Grid.SetColumn(_scroll, 1); Grid.SetRow(_scroll, 1); _shell.Children.Add(_scroll);
         if (!_ready) _content.Children.Add(Label(T("در حال راه‌اندازی…", "Starting…"), 18));
-        else if (_client.Accounts.Count == 0 && _tab != 2) Onboarding();
+        else if (_client.Accounts.Count == 0 && _tab != 2 && !_client.Config.DrKozol.OnboardingCompleted) Onboarding();
         else if (_tab == 2) { if (_themePage) ThemeGallery(); else Settings(); }
         else
         {
             if (_tab == 0) Home(); else Servers();
             if (_adding) AddForm();
             if (_tab == 0) _content.Children.Add(Section(T("اشتراک فعلی", "CURRENT SUBSCRIPTION")));
-            foreach (var account in _client.Accounts.Where(a => _tab == 1 || a.Id == _client.Config.SubIndexId)) _content.Children.Add(Provider(account));
+            if (_tab == 1) foreach (var account in _client.Accounts) _content.Children.Add(Provider(account));
         }
         _status = Label(NoticeText(), 12); _status.Foreground = Brush("#E76770"); _status.IsVisible = _status.Text?.Length > 0; _content.Children.Add(_status);
         Metrics(); Dispatcher.UIThread.Post(() => _scroll.Offset = new Vector(0, _offsets[_tab]), DispatcherPriority.Loaded);
@@ -303,14 +305,14 @@ public sealed class DrKozolWindow : Window
     private void Home()
     {
         var modes = Row(ModeButton("TUN", true), ModeButton("System Proxy", false)); modes.HorizontalAlignment = HorizontalAlignment.Center; modes.Margin = new Thickness(0, 20, 0, 0); _content.Children.Add(modes);
-        var power = ActionButton("", () => _client.Connect(), !_client.Busy && (_client.Connected || _client.Account is { } a && !AccountUsage.Locked(a)));
+        var power = ActionButton("", () => { if (_client.IsTesting) { _client.CancelTests(); return Task.CompletedTask; } return _client.Connect(); }, _client.IsTesting || !_client.Busy && (_client.Connected || _client.Account is { } a && !AccountUsage.Locked(a)));
         power.Width = 132; power.Height = 132; power.CornerRadius = new CornerRadius(66); power.Background = Panel;
         power.BorderBrush = _client.Connected ? Accent : Line; power.HorizontalAlignment = HorizontalAlignment.Center;
         power.Content = DesktopIcons.Draw(_client.Connected ? "shield" : "power", _client.Connected ? Accent : Muted, 42); power.Margin = new Thickness(0, 54, 0, 20);
         if (_client.Connected) power.Content = new Border { Child = DesktopIcons.Draw("shield", Accent, 42), Width = 128, Height = 128,
             CornerRadius = new CornerRadius(64), Background = Panel,
             BoxShadow = new BoxShadows(new BoxShadow { IsInset = true, Blur = 14, OffsetY = 5, Color = Colors.Black }) };
-        AutomationProperties.SetName(power, _client.Connected ? T("قطع اتصال", "Disconnect") : T("اتصال", "Connect")); _content.Children.Add(power);
+        AutomationProperties.SetName(power, _client.IsTesting ? T("توقف تست", "Stop tests") : _client.Connected ? T("قطع اتصال", "Disconnect") : T("اتصال", "Connect")); _content.Children.Add(PowerRing(power));
         var choices = Row(HomeAction(T("اتصال به بهترین", "Connect to best"), _client.ConnectBest, _client.HomeChoice == "best"),
             HomeAction(T("بالانسر", "Balancer"), _client.ConnectBalancer, _client.HomeChoice == "balancer"));
         choices.HorizontalAlignment = HorizontalAlignment.Center; _content.Children.Add(choices);
@@ -389,6 +391,10 @@ public sealed class DrKozolWindow : Window
         panel.Children.Add(Label("DrKozol", 38, true, Accent)); panel.Children.Add(Label(T("لینک اشتراک خود را وارد کنید", "Enter your subscription link"), 22, true));
         panel.Children.Add(Label(T("لینک را از پنل یا پشتیبانی دریافت کنید. سرورها، حجم و روزهای باقی‌مانده خودکار نمایش داده می‌شوند.", "Get the link from your panel or provider. Servers, remaining quota and days appear automatically."), 13, false, Muted));
         panel.Children.Add(UrlBox()); panel.Children.Add(ActionButton(T("اسکن QR از تصویر", "Scan QR image"), ImportQr, !_client.Busy)); panel.Children.Add(ActionButton(T("ادامه", "Continue"), () => _client.Import(_url?.Text ?? ""), !_client.Busy));
+        panel.Children.Add(ActionButton(T("ادامه بدون لینک ساب", "Continue without subscription"), async () => {
+            var settings = JsonUtils.DeepCopy(_client.Config.DrKozol); settings.OnboardingCompleted = true;
+            if (await _client.SavePreferences(settings)) Build();
+        }));
         panel.Children.Add(ManualGroupForm());
         panel.Children.Add(Row(ActionButton("فارسی", () => SetLanguage("fa")), ActionButton("English", () => SetLanguage("en")))); _content.Children.Add(panel);
     }
@@ -596,6 +602,24 @@ public sealed class DrKozolWindow : Window
         _content.Children.Add(gallery);
         }
     }
+    private Control PowerRing(Button button)
+    {
+        var wrapper = new Grid { Width = 156, Height = 156, Margin = button.Margin, HorizontalAlignment = HorizontalAlignment.Center };
+        button.Margin = new Thickness(0); wrapper.Children.Add(button);
+        var ring = new Avalonia.Controls.Shapes.Ellipse { Width = 152, Height = 152, Stroke = _client.Connected ? Accent : Line,
+            StrokeThickness = 3, IsHitTestVisible = false, RenderTransformOrigin = new RelativePoint(.5, .5, RelativeUnit.Relative) };
+        if (_client.IsTesting || _client.IsConnecting)
+        {
+            ring.Stroke = Accent; ring.StrokeDashArray = new Avalonia.Collections.AvaloniaList<double> { 28, 15 };
+            var rotation = new RotateTransform(); ring.RenderTransform = rotation;
+            var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(40) };
+            timer.Tick += (_, _) => rotation.Angle = (rotation.Angle + 360d / 35) % 360;
+            ring.AttachedToVisualTree += (_, _) => timer.Start();
+            ring.DetachedFromVisualTree += (_, _) => timer.Stop();
+        }
+        wrapper.Children.Add(ring); return wrapper;
+    }
+
     private Button HomeAction(string label, Func<Task> action, bool selected)
     {
         var button = ActionButton(label, action, !_client.Busy);
@@ -610,6 +634,8 @@ public sealed class DrKozolWindow : Window
     {
         var body = new StackPanel { Spacing = 8 };
         var draft = JsonUtils.DeepCopy(_client.Config.DrKozol);
+        var ipPreference = new ComboBox { ItemsSource = new[] { "auto", "ipv4", "ipv6" }, SelectedItem = draft.IpPreference, Foreground = Ink, Background = Panel };
+        body.Children.Add(SettingRow("wifi", T("نوع IP ترجیحی", "Preferred IP family"), T("با امکان استفاده از خانوادهٔ دیگر", "Retains fallback to the other address family"), ipPreference));
         foreach (var option in DesktopPreferences.Options)
         {
             var toggle = new CheckBox { Content = T(option.Farsi, option.English), IsChecked = option.Read(_client.Config.DrKozol), Foreground = Ink, MinHeight = 36 };
@@ -636,6 +662,7 @@ public sealed class DrKozolWindow : Window
         body.Children.Add(ActionButton(T("ذخیره", "Save"), async () => {
             if (!int.TryParse(interval.Text, out var minutes)) return;
             var next = JsonUtils.DeepCopy(draft); next.UpdateMinutes = minutes; next.PingUrl = ping.Text ?? "";
+            next.IpPreference = ipPreference.SelectedItem as string ?? "auto";
             if (!int.TryParse(sharingPort.Text, out var port)) return;
             next.UserAgent = agent.Text ?? ""; next.TunnelDns = dns.Text ?? "";
             next.ProxyUser = username.Text ?? ""; next.ProxyPassword = password.Text ?? ""; next.SharingPort = port;
@@ -643,7 +670,11 @@ public sealed class DrKozolWindow : Window
             await _client.SavePreferences(next);
         }));
         body.Children.Add(ActionButton(T("بازخورد", "Feedback"), () => { Process.Start(new ProcessStartInfo("https://github.com/SpecterLogic/Drkozol/issues") { UseShellExecute = true }); return Task.CompletedTask; }));
-        body.Children.Add(ActionButton(T("بررسی نسخهٔ جدید", "Check for updates"), async () => { if (await _client.CheckForUpdate() is { } url) Process.Start(new ProcessStartInfo(url) { UseShellExecute = true }); }));
+        body.Children.Add(ActionButton(T("بررسی نسخهٔ جدید", "Check for updates"), async () => {
+            if (await _client.CheckForUpdate() is not { } url) return;
+            var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions { SuggestedFileName = Path.GetFileName(new Uri(url).AbsolutePath), ShowOverwritePrompt = true });
+            if (file?.TryGetLocalPath() is { } path) await _client.DownloadUpdate(url, path);
+        }));
         return Card(body);
     }
     private Task EnableTunPermission()

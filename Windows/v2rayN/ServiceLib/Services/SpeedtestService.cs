@@ -283,7 +283,7 @@ public class SpeedtestService(Config config, Func<SpeedTestResult, Task> updateF
         ProcessService processService = null;
         try
         {
-            processService = await CoreManager.Instance.LoadCoreConfigSpeedtest(selecteds);
+            processService = await CoreManager.Instance.LoadCoreConfigSpeedtest(selecteds, _config);
             if (processService is null)
             {
                 return false;
@@ -374,7 +374,7 @@ public class SpeedtestService(Config config, Func<SpeedTestResult, Task> updateF
         ProcessService processService = null;
         try
         {
-            processService = await CoreManager.Instance.LoadCoreConfigSpeedtest(selecteds);
+            processService = await CoreManager.Instance.LoadCoreConfigSpeedtest(selecteds, _config);
             if (processService is null)
             {
                 return false;
@@ -447,7 +447,7 @@ public class SpeedtestService(Config config, Func<SpeedTestResult, Task> updateF
             ProcessService processService = null;
             try
             {
-                processService = await CoreManager.Instance.LoadCoreConfigSpeedtest(it);
+                processService = await CoreManager.Instance.LoadCoreConfigSpeedtest(it, _config);
                 if (processService is null)
                 {
                     await UpdateFunc(it.IndexId, "", ResUI.FailedToRunCore);

@@ -73,6 +73,11 @@ public static class SmokeTests
             Check(pixels.Distinct().Count() > 20, "WPF Persian onboarding render");
             Check(window.WindowStyle == WindowStyle.None && VisualChildren(window).OfType<Border>().Any(b => b.Height == 36 && b.Background is SolidColorBrush brush && brush.Color == Colors.Black), "Custom black desktop titlebar has 36 pixel height");
             Check(!client.Connected, "Startup does not connect automatically");
+            Check(VisualChildren(window).OfType<Button>().Any(b => b.Content as string == "ادامه بدون لینک ساب"), "Onboarding can continue without a subscription");
+            var scrollbar = new System.Windows.Controls.Primitives.ScrollBar { Minimum = 0, Maximum = 100, Value = 20, ViewportSize = 10 };
+            scrollbar.Style = (Style)Application.Current.Resources[typeof(System.Windows.Controls.Primitives.ScrollBar)]; scrollbar.ApplyTemplate();
+            var scrollPages = VisualChildren(scrollbar).OfType<System.Windows.Controls.Primitives.RepeatButton>().ToArray();
+            Check(scrollPages.Length == 2 && scrollPages.All(b => b.Opacity == 0), "Windows scrollbars have no arrow buttons");
             using (var tunConfig = JsonDocument.Parse(TunHost.Configuration(10808)))
             {
                 Check(tunConfig.RootElement.GetProperty("inbounds")[0].GetProperty("auto_route").GetBoolean()
@@ -260,7 +265,17 @@ public static class SmokeTests
                 await client.SelectServer(candidates.First().IndexId);
                 Check(client.Config.IndexId == candidates.First().IndexId, "Server row selects stable profile identity");
                 await client.Probe(false, candidates); Check(candidates.Any(p => client.Tcp.GetValueOrDefault(p.IndexId) > 0), "Real server TCP ping");
-                await client.Probe(true, candidates); Check(candidates.Any(p => client.Real.GetValueOrDefault(p.IndexId) > 0), "Real XHTTP/TLS delay");
+                await client.SetTun(true);
+                client.Account!.SortOrder = "name";
+                var cancelledProbe = client.Probe(true, candidates);
+                window.RenderForSmoke(0, true);
+                var stopPower = VisualChildren(window).OfType<Button>().First(b => System.Windows.Automation.AutomationProperties.GetName(b) is "Stop tests" or "توقف تست");
+                Check(stopPower.IsEnabled, "Power remains enabled during latency testing");
+                stopPower.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); await cancelledProbe;
+                Check(!client.IsTesting && !client.Busy, "Power cancels tests and restores the controls");
+                await client.Probe(true, candidates); Check(candidates.Any(p => client.Real.GetValueOrDefault(p.IndexId) > 0), "Real XHTTP/TLS delay with TUN selected before connection");
+                Check(client.Account.SortOrder == "ping", "Completed tests restore automatic latency ordering");
+                await client.SetTun(false);
                 await client.Best(candidates);
                 var profile = candidates.First(p => p.IndexId == client.Config.IndexId);
                 Check(client.Real.GetValueOrDefault(profile.IndexId) == candidates.Select(p => client.Real.GetValueOrDefault(p.IndexId)).Where(delay => delay > 0).Min(), "Best server chooses lowest real delay");

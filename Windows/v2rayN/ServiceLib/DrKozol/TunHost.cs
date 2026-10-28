@@ -50,13 +50,16 @@ public sealed class TunHost : IAsyncDisposable
         return copy;
     }
 
-    public static async Task<ProfileItem> ResolveEndpoint(ProfileItem profile, CancellationToken token)
+    public static Task<ProfileItem> ResolveEndpoint(ProfileItem profile, CancellationToken token) => ResolveEndpoint(profile, token, "auto");
+
+    public static async Task<ProfileItem> ResolveEndpoint(ProfileItem profile, CancellationToken token, string preference)
     {
         if (profile.IsComplex() || IPAddress.TryParse(profile.Address, out _)) return profile;
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(token);
         deadline.CancelAfter(TimeSpan.FromSeconds(8));
         var addresses = await Dns.GetHostAddressesAsync(profile.Address, deadline.Token);
-        var address = addresses.FirstOrDefault(a => a.AddressFamily == AddressFamily.InterNetwork) ?? addresses.FirstOrDefault() ?? throw new SocketException((int)SocketError.HostNotFound);
+        var family = preference == "ipv6" ? AddressFamily.InterNetworkV6 : AddressFamily.InterNetwork;
+        var address = addresses.FirstOrDefault(a => a.AddressFamily == family) ?? addresses.FirstOrDefault() ?? throw new SocketException((int)SocketError.HostNotFound);
         return WithResolvedEndpoint(profile, address);
     }
 

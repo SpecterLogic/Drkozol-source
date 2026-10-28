@@ -24,6 +24,18 @@ public partial class App
     /// <param name="e"></param>
     protected override void OnStartup(StartupEventArgs e)
     {
+        // The elevated replacement must not open the same settings/native-engine lease
+        // until the ordinary instance has finished its asynchronous shutdown.
+        if (e.Args.Contains(Global.RebootAs) && e.Args.FirstOrDefault(a => a.StartsWith("--wait-for-exit=")) is { } handoff
+            && int.TryParse(handoff["--wait-for-exit=".Length..], out var ownerId) && ownerId != Environment.ProcessId)
+        {
+            try
+            {
+                using var owner = Process.GetProcessById(ownerId);
+                if (!owner.WaitForExit(20000)) { Shutdown(); return; }
+            }
+            catch (ArgumentException) { } // The previous instance already exited.
+        }
         var exePathKey = Utils.GetMd5(Utils.GetExePath());
 
         var rebootas = e.Args.Any(t => t == Global.RebootAs);

@@ -73,6 +73,7 @@ public partial class CoreConfigV2rayService(CoreConfigContext context)
 
             ret.Msg = string.Format(ResUI.SuccessfulConfiguration, "");
             ret.Success = true;
+            ApplyDesktopIpPreference();
             ret.Data = ApplyFinalConfigModifiers();
             return ret;
         }
@@ -214,6 +215,7 @@ public partial class CoreConfigV2rayService(CoreConfigContext context)
             ApplyOutboundSendThrough();
             //ret.Msg =string.Format(ResUI.SuccessfulConfiguration"), node.getSummary());
             ret.Success = true;
+            ApplyDesktopIpPreference();
             ret.Data = ApplyCustomOutboundReplace();
             return ret;
         }
@@ -291,6 +293,7 @@ public partial class CoreConfigV2rayService(CoreConfigContext context)
 
             ret.Msg = string.Format(ResUI.SuccessfulConfiguration, "");
             ret.Success = true;
+            ApplyDesktopIpPreference();
             ret.Data = ApplyCustomOutboundReplace();
             return ret;
         }

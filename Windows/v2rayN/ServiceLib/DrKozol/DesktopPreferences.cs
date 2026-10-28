@@ -28,6 +28,8 @@ public sealed class DesktopPreferences
     public string PingUrl { get; set; } = "https://www.gstatic.com/generate_204";
     public string UserAgent { get; set; } = "DrKozol/1.5.0";
     public string SortOrder { get; set; } = "ping";
+    public string IpPreference { get; set; } = "auto";
+    public bool OnboardingCompleted { get; set; }
 
     public static readonly DesktopOption[] Options = [
         new("اتصال خودکار", "Connect on launch", p => p.AutoConnect, (p, v) => p.AutoConnect = v),

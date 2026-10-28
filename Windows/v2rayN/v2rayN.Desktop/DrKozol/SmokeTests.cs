@@ -81,7 +81,16 @@ internal static class SmokeTests
                 var candidates = client.Profiles.Where(p => p.ConfigType == EConfigType.VLESS && p.Network == "xhttp").ToList();
                 Check(candidates.Count > 0, "Live subscription contains imported XHTTP candidates");
                 await client.Probe(false, candidates); Check(candidates.Any(p => client.Tcp.GetValueOrDefault(p.IndexId) > 0), "Live TCP ping through Linux native client");
-                await client.Probe(true, candidates); Check(candidates.Any(p => client.Real.GetValueOrDefault(p.IndexId) > 0), "Live Linux XHTTP TLS Real Delay");
+                await client.SetTun(true); client.Account!.SortOrder = "name";
+                var cancelledProbe = client.Probe(true, candidates);
+                await window.RenderForSmoke(0, "Dark", "ocean");
+                var stopPower = window.GetVisualDescendants().OfType<Button>().First(b => Avalonia.Automation.AutomationProperties.GetName(b) is "Stop tests" or "توقف تست");
+                Check(stopPower.IsEnabled, "Linux power remains enabled while testing");
+                stopPower.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent)); await cancelledProbe;
+                Check(!client.IsTesting && !client.Busy, "Linux power cancels tests and restores controls");
+                await client.Probe(true, candidates); Check(candidates.Any(p => client.Real.GetValueOrDefault(p.IndexId) > 0), "Live Linux XHTTP TLS Real Delay with TUN selected");
+                Check(client.Account.SortOrder == "ping", "Completed Linux tests restore latency ordering");
+                await client.SetTun(false);
                 var port = AppManager.Instance.GetLocalPort(EInboundProtocol.socks);
                 using var http = new HttpClient(new HttpClientHandler { Proxy = new WebProxy($"socks5://127.0.0.1:{port}"), UseProxy = true }) { Timeout = TimeSpan.FromSeconds(25) };
                 stage = "proxy connection verification";

@@ -9,7 +9,7 @@ using ServiceLib.DrKozol;
 
 namespace v2rayN.DrKozol;
 
-public sealed class DrKozolWindow : Window
+public sealed partial class DrKozolWindow : Window
 {
     private readonly Grid _shell = new();
     private readonly StackPanel _content = new() { Margin = new Thickness(20, 10, 20, 12) };
@@ -28,6 +28,7 @@ public sealed class DrKozolWindow : Window
     private bool _sidebarCollapsed;
     private bool _ready;
     private bool _closing;
+    private bool _elevating;
     private bool _dark = true;
     private string _search = "";
     private string _input = "";
@@ -90,6 +91,7 @@ public sealed class DrKozolWindow : Window
         Content = _shell;
         _client.Changed += () => Dispatcher.BeginInvoke(Refresh);
         _client.Notice += code => Dispatcher.BeginInvoke(() => {
+            if (code == "admin") { _ = RestartElevated(); return; }
             _noticeUntil = code is "saved" or "updated" or "upToDate" or "updateAvailable" ? DateTimeOffset.UtcNow.AddSeconds(5) : DateTimeOffset.MaxValue;
             _status.Text = code switch
         {
@@ -98,6 +100,8 @@ public sealed class DrKozolWindow : Window
             "upToDate" => T("نسخهٔ جدیدتری برای این دستگاه موجود نیست", "No newer version is available for this device"),
             "updateAvailable" => T("نسخهٔ جدید آمادهٔ دریافت است", "A new version is available"),
             "updateError" => T("بررسی نسخهٔ جدید انجام نشد", "Could not check for updates"),
+            "updateDownloading" => T("در حال دانلود نسخهٔ جدید…", "Downloading update…"),
+            "updateDownloaded" => T("نسخهٔ جدید دانلود شد و صحت فایل تأیید شد", "Update downloaded and verified"),
             "saved" => T("ذخیره شد", "Saved"),
             "updated" => T("اشتراک‌ها به‌روز شدند", "Subscriptions updated"),
             "balancerUnavailable" => T("حداقل دو سرور سازگار نیاز است", "At least two compatible servers are required"),
@@ -235,6 +239,7 @@ public sealed class DrKozolWindow : Window
         if (_scroll is not null) { _scrollOffsets[_tab] = _scroll.VerticalOffset; _scroll.Content = null; }
         _url = null; _speed = null; _state = null; _delays.Clear(); _quotas.Clear();
         Background = Brush(Palette.Background); Foreground = Ink; _status.Foreground = Accent;
+        InstallScrollStyle();
         _shell.Children.Clear(); _shell.RowDefinitions.Clear(); _shell.ColumnDefinitions.Clear();
         _shell.RowDefinitions.Add(new RowDefinition { Height = new GridLength(36) });
         _shell.RowDefinitions.Add(new RowDefinition());
@@ -247,7 +252,7 @@ public sealed class DrKozolWindow : Window
         _content.Children.Clear(); _content.FlowDirection = FlowDirection.LeftToRight;
         if (!_ready) { _content.Children.Add(Label(T("در حال آماده‌سازی…", "Starting…"), 14, Muted)); _content.Children.Add(_status); return; }
         // Appearance and connection settings remain available before adding a subscription.
-        var onboard = _tab != 2 && (_client.Account is null || (_client.Profiles.Count == 0 && !AccountUsage.Locked(_client.Account)));
+        var onboard = !_client.Config.DrKozol.OnboardingCompleted && _tab != 2 && (_client.Account is null || (_client.Profiles.Count == 0 && !AccountUsage.Locked(_client.Account)));
         if (onboard) BuildOnboarding();
         else if (_tab == 2) { if (_themePage) BuildThemeGallery(); else BuildSettings(); }
         else
@@ -294,7 +299,7 @@ public sealed class DrKozolWindow : Window
         {
             var button = Button("", () => { ChangeTab(index); return Task.CompletedTask; }, height: 42);
             button.Content = _sidebarCollapsed ? DrKozolVisuals.Icon(icon, _tab == index ? Accent : Muted, 16) : Inline(icon, T(fa, en), _tab == index ? Accent : Muted);
-            button.Background = _tab == index ? AccentTint : Brush(Palette.Sidebar); button.BorderThickness = new Thickness(0);
+            button.Background = _tab == index ? new LinearGradientBrush(Colors.Black, Panel.Color, 90) : Brush(Palette.Sidebar); button.BorderThickness = new Thickness(0);
             button.HorizontalContentAlignment = _sidebarCollapsed ? HorizontalAlignment.Center : HorizontalAlignment.Left;
             button.Margin = new Thickness(0, 2, 0, 2); button.Padding = new Thickness(14, 9, 10, 9);
             button.ToolTip = T(fa, en); AutomationProperties.SetName(button, T(fa, en)); nav.Children.Add(button);
@@ -315,6 +320,10 @@ public sealed class DrKozolWindow : Window
         var help = Label(T("لینک اشتراک خود را وارد کنید تا سرورها و اطلاعات حساب دریافت شوند.", "Enter your subscription link to load your servers and account details."), 13, Muted); help.Margin = new Thickness(0, 0, 0, 18); body.Children.Add(help);
         body.Children.Add(UrlBox());
         body.Children.Add(Button(T("اسکن QR از تصویر", "Scan QR image"), ImportQrImage));
+        body.Children.Add(Button(T("ادامه بدون لینک ساب", "Continue without subscription"), async () => {
+            var settings = JsonUtils.DeepCopy(_client.Config.DrKozol); settings.OnboardingCompleted = true;
+            if (await _client.SavePreferences(settings)) Build();
+        }));
         body.Children.Add(ManualGroupForm());
         var load = Button(T("ورود و دریافت سرورها", "Load subscription"), () => _client.Import(_url?.Text ?? ""), !_client.Busy, 42); load.Background = AccentTint; load.Foreground = Accent; body.Children.Add(load);
         body.Children.Add(Row(Button("فارسی", () => SetLanguage("fa")), Button("English", () => SetLanguage("en"))));
@@ -339,7 +348,7 @@ public sealed class DrKozolWindow : Window
     {
         var modes = Row(ModeButton("TUN", true), ModeButton("System Proxy", false));
         modes.HorizontalAlignment = HorizontalAlignment.Center; modes.Margin = new Thickness(0, 18, 0, 0); _content.Children.Add(modes);
-        var connect = Button("", () => _client.Connect(), _client.Connected || !_client.Busy && _client.Account is { } a && !AccountUsage.Locked(a), 130);
+        var connect = Button("", () => { if (_client.IsTesting) { _client.CancelTests(); return Task.CompletedTask; } return _client.Connect(); }, _client.IsTesting || _client.Connected || !_client.Busy && _client.Account is { } a && !AccountUsage.Locked(a), 130);
         connect.Content = DrKozolVisuals.Icon(_client.Connected ? "shield" : "power", _client.Connected ? Accent : Muted, 39);
         connect.Width = 130; connect.Height = 130; connect.Padding = new Thickness(0); connect.HorizontalAlignment = HorizontalAlignment.Center;
         connect.Margin = new Thickness(0, 63, 0, 28); connect.Background = Panel;
@@ -352,7 +361,8 @@ public sealed class DrKozolWindow : Window
         border.AppendChild(content); template.VisualTree = border;
         var hover = new Trigger { Property = IsMouseOverProperty, Value = true }; hover.Setters.Add(new Setter(Border.BorderBrushProperty, Accent, "power")); template.Triggers.Add(hover);
         var disabled = new Trigger { Property = IsEnabledProperty, Value = false }; disabled.Setters.Add(new Setter(OpacityProperty, .38)); template.Triggers.Add(disabled); connect.Template = template;
-        AutomationProperties.SetName(connect, _client.Connected ? T("قطع اتصال", "Disconnect") : T("اتصال", "Connect")); _content.Children.Add(connect);
+        AutomationProperties.SetName(connect, _client.IsTesting ? T("توقف تست", "Stop tests") : _client.Connected ? T("قطع اتصال", "Disconnect") : T("اتصال", "Connect"));
+        _content.Children.Add(PowerRing(connect));
         var choices = Row(HomeAction(T("اتصال به بهترین", "Connect to best"), _client.ConnectBest, _client.HomeChoice == "best"),
             HomeAction(T("بالانسر", "Balancer"), _client.ConnectBalancer, _client.HomeChoice == "balancer"));
         choices.HorizontalAlignment = HorizontalAlignment.Center; _content.Children.Add(choices);
@@ -381,7 +391,11 @@ public sealed class DrKozolWindow : Window
     }
     private Button ModeButton(string text, bool tun)
     {
-        var button = Button(text, () => _client.SetTun(tun), Idle, 21);
+        var button = Button(text, async () => {
+            var previous = _client.UseTun;
+            await _client.SetTun(tun);
+            if (tun && !TunHost.IsAdministrator && !await RestartElevated()) await _client.SetTun(previous);
+        }, Idle, 21);
         button.Padding = new Thickness(11, 2, 11, 2); button.FontSize = 11; button.MinHeight = 21;
         button.Foreground = _client.UseTun == tun ? Accent : Muted; button.BorderBrush = _client.UseTun == tun ? Accent : Muted;
         button.Background = _client.UseTun == tun ? AccentTint : Brushes.Transparent; return button;
@@ -450,7 +464,7 @@ public sealed class DrKozolWindow : Window
     private void BuildProviders()
     {
         _providers.Children.Clear(); _delays.Clear(); _quotas.Clear();
-        foreach (var account in _client.Accounts.Where(a => _tab == 1 || a.ShowOnHome != false && a.Id == _client.Config.SubIndexId))
+        foreach (var account in _client.Accounts.Where(a => _tab == 1 || a.ShowOnHome != false))
         {
             var profiles = Filtered(account);
             if (_tab == 1 && (_category != "All" || _search.Length > 0) && profiles.Count == 0) continue;
@@ -811,6 +825,8 @@ public sealed class DrKozolWindow : Window
     {
         var body = new StackPanel();
         var draft = JsonUtils.DeepCopy(_client.Config.DrKozol);
+        var ipPreference = Picker(); ipPreference.ItemsSource = new[] { "auto", "ipv4", "ipv6" }; ipPreference.SelectedItem = draft.IpPreference;
+        body.Children.Add(SettingRow("connection", T("نوع IP ترجیحی", "Preferred IP family"), T("با امکان استفاده از خانوادهٔ دیگر", "Retains fallback to the other address family"), ipPreference));
         foreach (var option in DesktopPreferences.Options)
         {
             var toggle = new CheckBox { Content = T(option.Farsi, option.English), IsChecked = option.Read(_client.Config.DrKozol),
@@ -839,6 +855,7 @@ public sealed class DrKozolWindow : Window
         body.Children.Add(Button(T("ذخیره", "Save"), async () => {
             if (!int.TryParse(interval.Text, out var minutes)) return;
             var next = JsonUtils.DeepCopy(draft); next.UpdateMinutes = minutes; next.PingUrl = ping.Text;
+            next.IpPreference = ipPreference.SelectedItem as string ?? "auto";
             if (!int.TryParse(sharingPort.Text, out var port)) return;
             next.UserAgent = agent.Text ?? ""; next.TunnelDns = dns.Text ?? "";
             next.ProxyUser = username.Text ?? ""; next.ProxyPassword = password.Password; next.SharingPort = port;
@@ -846,7 +863,11 @@ public sealed class DrKozolWindow : Window
             await _client.SavePreferences(next);
         }));
         body.Children.Add(Button(T("بازخورد", "Feedback"), () => { Process.Start(new ProcessStartInfo("https://github.com/SpecterLogic/Drkozol/issues") { UseShellExecute = true }); return Task.CompletedTask; }));
-        body.Children.Add(Button(T("بررسی نسخهٔ جدید", "Check for updates"), async () => { if (await _client.CheckForUpdate() is { } url) Process.Start(new ProcessStartInfo(url) { UseShellExecute = true }); }));
+        body.Children.Add(Button(T("بررسی نسخهٔ جدید", "Check for updates"), async () => {
+            if (await _client.CheckForUpdate() is not { } url) return;
+            var picker = new Microsoft.Win32.SaveFileDialog { FileName = Path.GetFileName(new Uri(url).AbsolutePath), Filter = "DrKozol download|*.zip;*.exe;*.msi", OverwritePrompt = true };
+            if (picker.ShowDialog(this) == true) await _client.DownloadUpdate(url, picker.FileName);
+        }));
         return Card(body);
     }
     private void Section(string text)
@@ -874,18 +895,29 @@ public sealed class DrKozolWindow : Window
         AutomationProperties.SetName(_url, T("لینک ساب", "Subscription URL")); return _url;
     }
     private async Task RestartAsAdministrator()
+        => await RestartElevated();
+
+    private async Task<bool> RestartElevated()
     {
-        if (_client.Busy || TunHost.IsAdministrator) return;
+        if (_client.Busy || _elevating || TunHost.IsAdministrator) return false;
+        _elevating = true;
         try
         {
-            await _client.Close();
             var start = new ProcessStartInfo(Environment.ProcessPath!) { UseShellExecute = true, Verb = "runas", WorkingDirectory = Utils.GetBaseDirectory(), WindowStyle = ProcessWindowStyle.Normal };
+            start.ArgumentList.Add(Global.RebootAs);
+            start.ArgumentList.Add("--wait-for-exit=" + Environment.ProcessId);
             if (Process.Start(start) is null) throw new IOException();
+            IsEnabled = false;
+            await _client.Close();
             _closing = true; Close();
+            return true;
         }
-        catch (Exception)
+        catch (Exception error)
         {
-            _status.Text = T("اجرای مجدد تأیید نشد. برنامه را ببندید و با Run as administrator باز کنید.", "Restart was not approved. Close the app and launch it with Run as administrator."); IsEnabled = false;
+            Logging.SaveLog("DrKozol elevated restart", new Exception(error.GetType().Name));
+            _status.Text = T("اجرای مجدد تأیید نشد؛ برنامه همچنان قابل استفاده است.", "Restart was not approved; the app is still available.");
+            return false;
         }
+        finally { _elevating = false; }
     }
 }

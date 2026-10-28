@@ -62,6 +62,9 @@ public sealed class DrKozolController
     private Task? _sessionTask;
     private Task? _appearanceTask;
     private Task<string?>? _updateTask;
+    private Task<bool>? _downloadTask;
+    private string? _updateUrl;
+    private string? _updateDigest;
     private Task<bool>? _preferencesTask;
     private Task<bool>? _providerTask;
     private Task? _groupTask;
@@ -82,10 +85,13 @@ public sealed class DrKozolController
         try
         {
             using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(20), MaxResponseContentBufferSize = 2 * 1024 * 1024 };
-            http.DefaultRequestHeaders.UserAgent.ParseAdd("DrKozol/1.4.6");
+            http.DefaultRequestHeaders.UserAgent.ParseAdd("DrKozol/1.5.0");
             var json = await http.GetStringAsync("https://api.github.com/repos/SpecterLogic/Drkozol/releases/latest", _lifetime.Token);
             var installed = System.Reflection.Assembly.GetEntryAssembly()?.GetName().Version ?? new Version(1, 4, 6);
-            var url = FindDesktopUpdate(System.Text.Json.Nodes.JsonNode.Parse(json)!, installed, OperatingSystem.IsWindows());
+            var release = System.Text.Json.Nodes.JsonNode.Parse(json)!;
+            var url = FindDesktopUpdate(release, installed, OperatingSystem.IsWindows());
+            _updateUrl = url;
+            _updateDigest = (release["assets"] as System.Text.Json.Nodes.JsonArray)?.FirstOrDefault(a => a?["browser_download_url"]?.GetValue<string>() == url)?["digest"]?.GetValue<string>();
             Notice?.Invoke(url is null ? "upToDate" : "updateAvailable"); return url;
         }
         catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { return null; }
@@ -108,6 +114,42 @@ public sealed class DrKozolController
             if (compatible && name.StartsWith("drkozol-") && url?.StartsWith("https://github.com/SpecterLogic/Drkozol/releases/download/", StringComparison.Ordinal) == true) return url;
         }
         return null;
+    }
+
+    public Task<bool> DownloadUpdate(string url, string destination) => _closed ? Task.FromResult(false)
+        : _downloadTask is { IsCompleted: false } ? _downloadTask : (_downloadTask = DownloadUpdateCore(url, destination));
+
+    private async Task<bool> DownloadUpdateCore(string url, string destination)
+    {
+        if (url != _updateUrl || _updateDigest is not { Length: 71 } expected || !expected.StartsWith("sha256:", StringComparison.Ordinal))
+        { Notice?.Invoke("updateError"); return false; }
+        var temporary = destination + "." + Guid.NewGuid().ToString("N") + ".part";
+        try
+        {
+            Notice?.Invoke("updateDownloading");
+            using var deadline = CancellationTokenSource.CreateLinkedTokenSource(_lifetime.Token); deadline.CancelAfter(TimeSpan.FromMinutes(15));
+            using var http = new HttpClient { Timeout = Timeout.InfiniteTimeSpan };
+            using var response = await http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, deadline.Token); response.EnsureSuccessStatusCode();
+            if (response.Content.Headers.ContentLength > 400 * 1024 * 1024) throw new InvalidDataException();
+            await using (var input = await response.Content.ReadAsStreamAsync(deadline.Token))
+            await using (var output = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None, 65536, true))
+            {
+                var buffer = new byte[65536]; long total = 0; int count;
+                while ((count = await input.ReadAsync(buffer, deadline.Token)) != 0)
+                {
+                    total += count; if (total > 400 * 1024 * 1024) throw new InvalidDataException();
+                    await output.WriteAsync(buffer.AsMemory(0, count), deadline.Token);
+                }
+            }
+            await using (var stream = File.OpenRead(temporary))
+            {
+                var actual = Convert.ToHexString(await System.Security.Cryptography.SHA256.HashDataAsync(stream, deadline.Token));
+                if (!actual.Equals(expected[7..], StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException();
+            }
+            File.Move(temporary, destination, true); Notice?.Invoke("updateDownloaded"); return true;
+        }
+        catch (Exception error) { Logging.SaveLog("DrKozol update download", new Exception(error.GetType().Name)); Notice?.Invoke("updateError"); return false; }
+        finally { if (File.Exists(temporary)) File.Delete(temporary); }
     }
 
     public Task<bool> SavePreferences(DesktopPreferences preferences) => _closed ? Task.FromResult(false)
@@ -147,6 +189,7 @@ public sealed class DrKozolController
         if (!DesktopPreferences.ValidHttps(preferences.PingUrl) || preferences.UpdateMinutes is < 15 or > 43200
             || preferences.UserAgent.Contains('\r') || preferences.UserAgent.Contains('\n')
             || preferences.ApplicationMode is not ("all" or "include" or "exclude")
+            || preferences.IpPreference is not ("auto" or "ipv4" or "ipv6")
             || !DesktopPreferences.ValidDns(preferences.TunnelDns)
             || preferences.ShareProxy && (preferences.SharingPort is < 1 or > 65535
                 || string.IsNullOrWhiteSpace(preferences.ProxyUser) || string.IsNullOrWhiteSpace(preferences.ProxyPassword)))
@@ -598,10 +641,11 @@ public sealed class DrKozolController
                 // Protocol engines stay private; authenticated LAN sharing has its own listener.
                 nativeConfig.Inbound.First().AllowLANConn = false;
                 nativeConfig.Inbound.First().SecondLocalPortEnabled = false;
-                var runtimeProfile = UseTun ? await TunHost.ResolveEndpoint(profile, _lifetime.Token) : profile;
+                var runtimeProfile = UseTun ? await TunHost.ResolveEndpoint(profile, _lifetime.Token, Config.DrKozol.IpPreference) : profile;
                 var context = await CoreConfigContextBuilder.BuildAll(nativeConfig, runtimeProfile);
                 if (!context.Success) throw new InvalidDataException();
-                if (UseTun) await TunHost.ResolveContextEndpoints(context.MainResult.Context, _lifetime.Token);
+                if (UseTun) await TunHost.ResolveContextEndpoints(context.MainResult.Context, _lifetime.Token,
+                    (node, token) => TunHost.ResolveEndpoint(node, token, Config.DrKozol.IpPreference));
                 await CoreManager.Instance.LoadCore(context.MainResult.Context, context.PreSocksResult?.Context);
             }
             // Process.Start is not a ready signal. Do not route applications to a listener that
@@ -731,6 +775,13 @@ public sealed class DrKozolController
                 if (real) try { delay = await AmneziaHost.RealDelay(profile.AmneziaConfig!, probeToken, testConfig.SpeedTestItem.SpeedPingTestUrl); } catch (OperationCanceledException) { throw; } catch (Exception) { }
                 // AmneziaWG endpoints use UDP; a TCP test is not applicable.
                 target[profile.IndexId] = delay; Changed?.Invoke();
+            }
+            // A completed test always presents its fresh results from fastest to slowest.
+            var testedAccounts = list.Select(p => p.Subid).ToHashSet();
+            foreach (var account in Accounts.Where(a => testedAccounts.Contains(a.Id)))
+            {
+                account.SortOrder = "ping";
+                await SQLiteHelper.Instance.ReplaceAsync(account);
             }
         }
         catch (OperationCanceledException) { }
@@ -863,7 +914,7 @@ public sealed class DrKozolController
         }
         _lifetime.Cancel(); CancelTests();
         try { await Task.WhenAll(new Task?[] { _importTask, _probeTask, _qrTask, _selectionTask, _sessionTask, _appearanceTask,
-            _updateTask, _preferencesTask, _providerTask, _groupTask, _dataTask }.OfType<Task>()); }
+            _updateTask, _downloadTask, _preferencesTask, _providerTask, _groupTask, _dataTask }.OfType<Task>()); }
         catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
         catch (Exception error) { Logging.SaveLog("Drkozol join desktop work", new Exception(error.GetType().Name)); }
         if (_monitorTask is not null) await Cleanup(() => _monitorTask, "monitor work");

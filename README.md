@@ -5,13 +5,13 @@ https://github.com/SpecterLogic/Drkozol
 
 The applications and components retain their respective software licenses and
 copyright notices. See LICENSE, Windows/LICENSE, docs/licenses and the notices
-inside individual components. Copyright Â© 2026 Drkozol applies to original branding
+inside individual components. Copyright Ã‚Â© 2026 Drkozol applies to original branding
 and artwork without restricting rights granted by those software licenses.
 
 ## Build from the source release archive
 
-Download DrKozol-linux-source-1.5.0.zip from the v1.5.0-linux release for Linux.
-The original v1.5.0 release archive remains available for the Android and Windows binaries. The archive
+Download DrKozol-desktop-source-1.5.0.zip from the v1.5.0-desktop release for Windows and Linux.
+The original v1.5.0 release archive remains available for the original Android and Windows binaries. The archive
 includes the verified Android native compiler inputs and routing data used in the
 release. Signing keys, subscriptions and local settings are excluded.
 

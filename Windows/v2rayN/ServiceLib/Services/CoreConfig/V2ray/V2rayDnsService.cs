@@ -2,6 +2,21 @@ namespace ServiceLib.Services.CoreConfig;
 
 public partial class CoreConfigV2rayService
 {
+    private void ApplyDesktopIpPreference()
+    {
+        if (_config.DrKozol?.IpPreference is not ("ipv4" or "ipv6")) return;
+        var protocols = Global.XraySupportConfigType.Select(t => t == EConfigType.Hysteria2 ? "hysteria" : Global.ProtocolTypes[t]).ToHashSet();
+        foreach (var outbound in _coreConfig.outbounds.Where(o => protocols.Contains(o.protocol)))
+        {
+            outbound.streamSettings ??= new();
+            outbound.streamSettings.sockopt ??= new();
+            outbound.streamSettings.sockopt.domainStrategy = "UseIP";
+            outbound.streamSettings.sockopt.happyEyeballs = new() {
+                prioritizeIPv6 = _config.DrKozol.IpPreference == "ipv6", interleave = 2,
+            };
+        }
+    }
+
     private void GenDns()
     {
         try

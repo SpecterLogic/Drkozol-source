@@ -108,12 +108,12 @@ public class CoreManager
         }
     }
 
-    public async Task<ProcessService?> LoadCoreConfigSpeedtest(List<ServerTestItem> selecteds)
+    public async Task<ProcessService?> LoadCoreConfigSpeedtest(List<ServerTestItem> selecteds, Config? testConfig = null)
     {
         var coreType = selecteds.FirstOrDefault()?.CoreType == ECoreType.sing_box ? ECoreType.sing_box : ECoreType.Xray;
         var fileName = string.Format(Global.CoreSpeedtestConfigFileName, Utils.GetGuid(false));
         var configPath = Utils.GetBinConfigPath(fileName);
-        var result = await CoreConfigHandler.GenerateClientSpeedtestConfig(_config, configPath, selecteds, coreType);
+        var result = await CoreConfigHandler.GenerateClientSpeedtestConfig(testConfig ?? _config, configPath, selecteds, coreType);
         await UpdateFunc(false, result.Msg);
         if (result.Success != true)
         {
@@ -127,7 +127,7 @@ public class CoreManager
         return await RunProcess(coreInfo, fileName, true, false);
     }
 
-    public async Task<ProcessService?> LoadCoreConfigSpeedtest(ServerTestItem testItem)
+    public async Task<ProcessService?> LoadCoreConfigSpeedtest(ServerTestItem testItem, Config? testConfig = null)
     {
         var node = await AppManager.Instance.GetProfileItem(testItem.IndexId);
         if (node is null)
@@ -137,8 +137,9 @@ public class CoreManager
 
         var fileName = string.Format(Global.CoreSpeedtestConfigFileName, Utils.GetGuid(false));
         var configPath = Utils.GetBinConfigPath(fileName);
-        var (context, _) = await CoreConfigContextBuilder.Build(_config, node);
-        var result = await CoreConfigHandler.GenerateClientSpeedtestConfig(_config, context, testItem, configPath);
+        var effective = testConfig ?? _config;
+        var (context, _) = await CoreConfigContextBuilder.Build(effective, node);
+        var result = await CoreConfigHandler.GenerateClientSpeedtestConfig(effective, context, testItem, configPath);
         if (result.Success != true)
         {
             return null;

@@ -53,6 +53,8 @@ public class Desktop146CompatibilityTests
     {
         var document = JsonNode.Parse(TunHost.Configuration(10808, new() { RouteLan = true }, "9.9.9.9"))!;
         await document["inbounds"]![0]!["address"]!.AsArray().Count.Should().BeEqualTo(2);
+        await document["inbounds"]![0]!["dns_mode"]!.GetValue<string>().Should().BeEqualTo("hijack");
+        await document["inbounds"]![0]!["dns_address"]![0]!.GetValue<string>().Should().BeEqualTo("172.29.255.2");
         await document["route"]!["rules"]!.AsArray().Count.Should().BeEqualTo(2);
         await document["dns"]!["servers"]![0]!["server"]!.GetValue<string>().Should().BeEqualTo("9.9.9.9");
         var normal = JsonNode.Parse(TunHost.Configuration(10808))!;

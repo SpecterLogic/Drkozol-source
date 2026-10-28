@@ -93,7 +93,7 @@ public sealed class TunHost : IAsyncDisposable
         {
           "log": {"disabled": true},
           "dns": {"servers": [{"type":"https","tag":"remote","server":"1.1.1.1","detour":"proxy","tls":{"enabled":true,"server_name":"cloudflare-dns.com"}}],"final":"remote"},
-          "inbounds": [{"type":"tun","tag":"tun","interface_name":"DrKozol","address":["172.29.255.1/30","fdfe:dcba:9876::1/126"],"mtu":1400,"auto_route":true,"strict_route":true,"stack":"mixed"}],
+          "inbounds": [{"type":"tun","tag":"tun","interface_name":"DrKozol","address":["172.29.255.1/30","fdfe:dcba:9876::1/126"],"dns_mode":"hijack","dns_address":["172.29.255.2","fdfe:dcba:9876::2"],"mtu":1400,"auto_route":true,"strict_route":true,"stack":"mixed"}],
           "outbounds": [{"type":"socks","tag":"proxy","server":"127.0.0.1","server_port":{{{port}}},"version":"5"},{"type":"direct","tag":"direct"}],
           "route": {"auto_detect_interface":true,"default_domain_resolver":"remote","rules":[
             {"process_name":["xray.exe","drkozol-awg.exe","sing-box.exe","xray","drkozol-awg","sing-box"],"action":"route","outbound":"direct"},
@@ -171,17 +171,39 @@ public sealed class TunHost : IAsyncDisposable
             if (!Running) { await _process.WaitForExitAsync(token); StartupFailure ??= "native exit " + _process.ExitCode; throw new IOException(); }
             var ready = !enableTun || await Task.Run(() => NetworkInterface.GetAllNetworkInterfaces().Any(n => n.Name == "DrKozol"
                 && n.OperationalStatus == OperationalStatus.Up
-                && n.GetIPProperties().UnicastAddresses.Any(a => a.Address.ToString() == "172.29.255.1")), deadline.Token);
+                && n.GetIPProperties().UnicastAddresses.Any(a => a.Address.ToString() == "172.29.255.1")
+                && (!OperatingSystem.IsWindows() || n.GetIPProperties().DnsAddresses.Any(a => a.ToString() == "172.29.255.2"))), deadline.Token);
             if (ready && preferences is { ShareProxy: true })
             {
                 using var client = new TcpClient();
                 try { await client.ConnectAsync(IPAddress.Loopback, preferences.SharingPort, deadline.Token); }
                 catch (SocketException) { ready = false; }
             }
-            if (ready) { await Task.Delay(300, deadline.Token); if (!Running) throw new IOException(); return; }
+            if (ready)
+            {
+                if (enableTun && OperatingSystem.IsWindows())
+                {
+                    // Windows can cache a failed lookup while Wintun is up but interface DNS
+                    // is still being configured. Clear that cache before handing apps to TUN.
+                    await Task.Run(() => FlushResolverCache(), deadline.Token);
+                    var host = new Uri(preferences?.PingUrl ?? "https://www.gstatic.com/generate_204").Host;
+                    while (true)
+                    {
+                        deadline.Token.ThrowIfCancellationRequested();
+                        try { if ((await Dns.GetHostAddressesAsync(host, deadline.Token)).Length > 0) break; }
+                        catch (SocketException) { await Task.Run(() => FlushResolverCache(), deadline.Token); }
+                        await Task.Delay(250, deadline.Token);
+                    }
+                }
+                if (!Running) throw new IOException(); return;
+            }
             await Task.Delay(100, deadline.Token);
         }
     }
+
+    [DllImport("dnsapi.dll", EntryPoint = "DnsFlushResolverCache")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool FlushResolverCache();
 
     public async ValueTask DisposeAsync()
     {

@@ -660,6 +660,19 @@ public sealed class DrKozolController
                     Proxy = new WebProxy($"socks5://127.0.0.1:{AppManager.Instance.GetLocalPort(EInboundProtocol.socks)}") }) { Timeout = TimeSpan.FromSeconds(3) };
                 http.DefaultRequestHeaders.ConnectionClose = true;
                 var url = string.IsNullOrWhiteSpace(owner.ProbeUrl) ? Config.DrKozol.PingUrl : owner.ProbeUrl;
+                using var metrics = new HttpClient(new HttpClientHandler { UseProxy = false }) { Timeout = TimeSpan.FromSeconds(2), MaxResponseContentBufferSize = 2 * 1024 * 1024 };
+                var members = (profile.GetProtocolExtra().ChildItems ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries).Length;
+                while (true)
+                {
+                    ready.Token.ThrowIfCancellationRequested();
+                    try
+                    {
+                        var report = await metrics.GetStringAsync($"http://127.0.0.1:{AppManager.Instance.StatePort}/debug/vars", ready.Token);
+                        if (BalancerHealthComplete(report, members)) break;
+                    }
+                    catch (HttpRequestException) { }
+                    await Task.Delay(200, ready.Token);
+                }
                 await WaitForUsableRoute(async token => {
                     if (!CoreManager.Instance.IsRunning) throw new IOException();
                     try { using var response = await http.GetAsync(url, token); return response.IsSuccessStatusCode; }
@@ -729,6 +742,20 @@ public sealed class DrKozolController
             catch (HttpRequestException error) { consecutive = 0; Logging.SaveLog("DrKozol balancer route readiness", new Exception(error.GetType().Name)); }
             if (consecutive < 2) await Task.Delay(250, token);
         }
+    }
+
+    public static bool BalancerHealthComplete(string report, int members)
+    {
+        using var document = JsonDocument.Parse(report);
+        if (!document.RootElement.TryGetProperty("observatory", out var statuses) || statuses.ValueKind != JsonValueKind.Object) return false;
+        var known = 0; var alive = 0;
+        foreach (var entry in statuses.EnumerateObject())
+        {
+            if (!entry.Name.StartsWith("proxy", StringComparison.Ordinal) || !entry.Value.TryGetProperty("last_try_time", out var tried) || tried.GetInt64() <= 0) continue;
+            known++;
+            if (entry.Value.TryGetProperty("alive", out var usable) && usable.ValueKind == JsonValueKind.True) alive++;
+        }
+        return members > 0 && known >= members && alive > 0;
     }
 
     private async Task StopCore()

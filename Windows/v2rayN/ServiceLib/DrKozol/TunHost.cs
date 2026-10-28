@@ -171,8 +171,7 @@ public sealed class TunHost : IAsyncDisposable
             if (!Running) { await _process.WaitForExitAsync(token); StartupFailure ??= "native exit " + _process.ExitCode; throw new IOException(); }
             var ready = !enableTun || await Task.Run(() => NetworkInterface.GetAllNetworkInterfaces().Any(n => n.Name == "DrKozol"
                 && n.OperationalStatus == OperationalStatus.Up
-                && n.GetIPProperties().UnicastAddresses.Any(a => a.Address.ToString() == "172.29.255.1")
-                && (!OperatingSystem.IsWindows() || n.GetIPProperties().DnsAddresses.Any(a => a.ToString() == "172.29.255.2"))), deadline.Token);
+                && n.GetIPProperties().UnicastAddresses.Any(a => a.Address.ToString() == "172.29.255.1")), deadline.Token);
             if (ready && preferences is { ShareProxy: true })
             {
                 using var client = new TcpClient();
@@ -183,9 +182,12 @@ public sealed class TunHost : IAsyncDisposable
             {
                 if (enableTun && OperatingSystem.IsWindows())
                 {
+                    StartupFailure = "configuring virtual adapter DNS";
+                    await ConfigureWindowsDns(deadline.Token);
                     // Windows can cache a failed lookup while Wintun is up but interface DNS
                     // is still being configured. Clear that cache before handing apps to TUN.
                     await Task.Run(() => FlushResolverCache(), deadline.Token);
+                    StartupFailure = "waiting for tunnel DNS response";
                     var host = new Uri(preferences?.PingUrl ?? "https://www.gstatic.com/generate_204").Host;
                     while (true)
                     {
@@ -195,7 +197,7 @@ public sealed class TunHost : IAsyncDisposable
                         await Task.Delay(250, deadline.Token);
                     }
                 }
-                if (!Running) throw new IOException(); return;
+                if (!Running) throw new IOException(); StartupFailure = null; return;
             }
             await Task.Delay(100, deadline.Token);
         }
@@ -204,6 +206,27 @@ public sealed class TunHost : IAsyncDisposable
     [DllImport("dnsapi.dll", EntryPoint = "DnsFlushResolverCache")]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool FlushResolverCache();
+
+    private static async Task ConfigureWindowsDns(CancellationToken token)
+    {
+        if (!OperatingSystem.IsWindows()) return;
+        var adapter = await Task.Run(() => NetworkInterface.GetAllNetworkInterfaces().FirstOrDefault(n => n.Name == "DrKozol"), token);
+        if (adapter?.GetIPProperties().DnsAddresses.Any(a => a.ToString() == "172.29.255.2") == true) return;
+        // Windows 10/11 may expose the Wintun address before its native DNS assignment.
+        // Repair only our virtual interface; physical-adapter DNS is never changed here.
+        using var command = new Process { StartInfo = new ProcessStartInfo(Path.Combine(Environment.SystemDirectory, "netsh.exe")) {
+            UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true,
+        } };
+        foreach (var argument in new[] { "interface", "ipv4", "set", "dnsservers", "name=DrKozol", "source=static", "address=172.29.255.2", "validate=no" })
+            command.StartInfo.ArgumentList.Add(argument);
+        if (!command.Start()) throw new IOException();
+        try
+        {
+            await Task.WhenAll(command.StandardOutput.ReadToEndAsync(token), command.StandardError.ReadToEndAsync(token), command.WaitForExitAsync(token));
+            if (command.ExitCode != 0) throw new IOException("Virtual adapter DNS configuration failed");
+        }
+        finally { if (!command.HasExited) command.Kill(); }
+    }
 
     public async ValueTask DisposeAsync()
     {

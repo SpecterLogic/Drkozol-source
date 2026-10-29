@@ -10,6 +10,7 @@ data class CoreConfigContext(
     val isCustom: Boolean = false,
     val resolvedOutbounds: List<ResolvedOutbound> = emptyList(),
     val routingDomainRules: List<RoutingDomainRule> = emptyList(),
+    val happRouting: com.v2ray.ang.handler.HappRoutingProfile? = null,
 ) {
     data class ResolvedOutbound(
         val tag: String,

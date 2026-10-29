@@ -184,6 +184,9 @@ object AngConfigManager {
      */
     fun importBatchConfig(server: String?, subid: String, append: Boolean): Pair<Int, Int> {
         return try {
+            if (server != null && HappRoutingParser.isLink(server)) {
+                return if (HappRoutingStore.install(com.v2ray.ang.AngApplication.application, subid, server)) 1 to 0 else 0 to 0
+            }
             if (server?.trimStart()?.startsWith("[Interface]") == true) {
                 val profile = com.v2ray.ang.fmt.AmneziaFmt.parse(server) ?: return 0 to 0
                 profile.subscriptionId = subid
@@ -495,7 +498,9 @@ object AngConfigManager {
             val userAgent = it.subscription.userAgent?.takeIf { value -> value.isNotBlank() }
                 ?: SettingsManager.clientPreferences().userAgent
             val requestHeaders = SettingsManager.subscriptionRequestHeaders(it.subscription.requestHeaders)
+            var importedRoutingLink: String? = null
             val captureHeaders: (okhttp3.Headers) -> Unit = { headers ->
+                importedRoutingLink = headers["routing"]?.takeIf(HappRoutingParser::isLink)
                 com.v2ray.ang.dto.entities.SubscriptionMetadata.text(headers["announce"] ?: headers["profile-announce"])?.let { message ->
                     it.subscription.announcement = message
                     MmkvManager.encodeSubscription(it.guid, it.subscription)
@@ -572,10 +577,15 @@ object AngConfigManager {
                 return SubscriptionUpdateResult(failureCount = 1)
             }
 
+            val decodedBody = Utils.decode(configText).takeIf { decoded -> decoded.contains("happ://routing/") } ?: configText
+            val routingLink = decodedBody.lineSequence().map(String::trim).firstOrNull(HappRoutingParser::isLink)
+                ?: importedRoutingLink
             val count = parseConfigViaSub(configText, it.guid, false)
             if (count > 0) {
                 it.subscription.lastUpdated = System.currentTimeMillis()
                 MmkvManager.encodeSubscription(it.guid, it.subscription)
+                if (routingLink != null && !HappRoutingStore.install(com.v2ray.ang.AngApplication.application, it.guid, routingLink))
+                    return SubscriptionUpdateResult(configCount = count, failureCount = 1)
                 LogUtil.i(AppConfig.TAG, "Subscription updated group=${it.guid} count=$count")
                 return SubscriptionUpdateResult(
                     configCount = count,

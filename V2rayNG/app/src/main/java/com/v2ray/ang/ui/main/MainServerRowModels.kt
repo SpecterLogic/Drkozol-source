@@ -29,7 +29,7 @@ internal fun buildServerRowUiModel(
     return ServerRowUiModel(
         guid = server.guid,
         profile = profile,
-        remarks = profile.remarks,
+        remarks = if (server.favorite) "★ ${profile.remarks}" else profile.remarks,
         statistics = profile.description.nullIfBlank()
             ?: AngConfigManager.generateDescription(profile),
         typeDescription = serverProtocolDescription(profile),

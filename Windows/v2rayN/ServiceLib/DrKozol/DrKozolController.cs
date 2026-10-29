@@ -819,9 +819,12 @@ public sealed class DrKozolController
 
     public Task Probe(bool real, IEnumerable<ProfileItem> profiles) => _closed || Busy ? Task.CompletedTask : (_probeTask = ProbeCore(real, profiles));
 
-    private async Task ProbeCore(bool real, IEnumerable<ProfileItem> profiles)
+    private async Task ProbeCore(bool real, IEnumerable<ProfileItem> profiles, SubItem? provider = null)
     {
-        if (Busy || Connected || Account is null || AccountUsage.Locked(Account)) return;
+        if (Busy || Connected) return;
+        var owner = provider ?? Account;
+        if (owner is null) { Notice?.Invoke("probeError"); return; }
+        if (AccountUsage.Locked(owner)) { Notice?.Invoke("probeLocked"); return; }
         LastProbeCancelled = false;
         _workBusy = true; Changed?.Invoke();
         var target = real ? Real : Tcp;
@@ -833,7 +836,7 @@ public sealed class DrKozolController
         foreach (var profile in list) target.TryRemove(profile.IndexId, out _);
         var testConfig = JsonUtils.DeepCopy(Config);
         testConfig.SpeedTestItem.SpeedPingTestUrl = Config.DrKozol.PingUrl;
-        if (!string.IsNullOrWhiteSpace(Account.ProbeUrl)) testConfig.SpeedTestItem.SpeedPingTestUrl = Account.ProbeUrl;
+        if (!string.IsNullOrWhiteSpace(owner.ProbeUrl)) testConfig.SpeedTestItem.SpeedPingTestUrl = owner.ProbeUrl;
         testConfig.TunModeItem.EnableTun = false;
         _tests = new SpeedtestService(testConfig, result =>
         {
@@ -877,7 +880,11 @@ public sealed class DrKozolController
         if (_closed || Busy) return Task.CompletedTask;
         var profile = SelectedProfile;
         if (profile is null) return Task.CompletedTask;
-        return _probeTask = Connected ? ProbeConnected(real, profile) : ProbeCore(real, [profile]);
+        // A user-requested offline diagnostic must not race automatic reconnection.
+        // Testing never implicitly resumes a failed connection; the user can connect afterward.
+        if (!Connected) _wantConnected = false;
+        return _probeTask = Connected ? ProbeConnected(real, profile)
+            : ProbeCore(real, [profile], Accounts.FirstOrDefault(a => a.Id == profile.Subid));
     }
 
     private async Task ProbeConnected(bool real, ProfileItem profile)

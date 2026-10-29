@@ -306,6 +306,7 @@ fun DrSpectScreen(mainViewModel: MainViewModel, dispatchAction: (MainAction) -> 
                         Section(R.string.dr_performance)
                         GlassCard(glass, border) { Column {
                             SettingsRow(R.drawable.ic_settings_24dp, R.string.dr_performance) { settingsPanel = "performance" }
+                            SettingsRow(R.drawable.dr_speed, R.string.dr_connection_tools) { onNavigate(MainDestination.ConnectionTools) }
                             SettingsRow(R.drawable.ic_flash_on_24dp, R.string.dr_advanced) { onNavigate(MainDestination.Settings) }
                         } }
                         GlassCard(glass, border) { Column {

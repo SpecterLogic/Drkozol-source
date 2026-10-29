@@ -561,4 +561,33 @@
     <string name="connection_test_empty_message">جزئیاتی در دسترس نیست</string>
     <string name="value_unknown">ناشناخته</string>
 
+    <string name="dr_backup_password">رمز بکاپ</string>
+    <string name="dr_backup_password_help">برای خروجی اختیاری است؛ حداقل ۸ نویسه. برای بازیابی بکاپ رمزدار، رمز اصلی را وارد کنید. رمز ذخیره نمی‌شود.</string>
+    <string name="dr_connection_tools">ابزارهای اتصال</string>
+    <string name="dr_auto_network">شبکهٔ مجاز برای شروع خودکار</string>
+    <string name="dr_auto_network_help">برای شروع خودکار هنگام بازکردن برنامه یا روشن‌شدن دستگاه است. اتصال دستی همیشه در دسترس می‌ماند.</string>
+    <string name="dr_network_any">همهٔ شبکه‌ها</string>
+    <string name="dr_network_wifi">فقط وای‌فای</string>
+    <string name="dr_network_mobile">فقط اینترنت سیم‌کارت</string>
+    <string name="dr_network_unmetered">فقط شبکه‌های بدون محدودیت مصرف</string>
+    <string name="dr_warp_import">افزودن کانفیگ WireGuard مربوط به WARP</string>
+    <string name="dr_warp_import_help">کانفیگ WireGuard مربوط به WARP خود را وارد کنید. کانفیگ بدون اتصال خودکار اضافه می‌شود؛ حساب Cloudflare ساخته نمی‌شود.</string>
+    <string name="dr_tools_saved">کانفیگ اضافه شد</string>
+    <string name="dr_tools_error">عملیات انجام نشد. کانفیگ را بررسی و دوباره تلاش کنید.</string>
+    <string name="dr_quality_history">سرورهای محبوب و سابقهٔ تست</string>
+    <string name="dr_quality_help">سرورهای محبوب اینجا بالاترند و در فهرست سرورها ستاره دارند. کیفیت از ۲۰ تست آخر Real Delay محاسبه می‌شود؛ شکست تست به معنی اتلاف بسته نیست. عیب‌یابی پایه DNS، TCP و در صورت کاربرد TLS معتبر را بررسی می‌کند. اتصال کامل پروکسی را با Real Delay تست کنید.</string>
+    <string name="dr_favorite_server">سرور محبوب: %1$s</string>
+    <string name="dr_quality_no_samples">هنوز سابقه‌ای از Real Delay وجود ندارد</string>
+    <string name="dr_quality_summary">تست: %1$d · ناموفق: %2$d%% · میانگین: %3$s ms · نوسان: %4$s ms</string>
+    <string name="dr_basic_diagnostic">اجرای عیب‌یابی پایه</string>
+    <string name="dr_diagnostic_dns_ok">DNS آدرس سرور را پیدا کرد</string>
+    <string name="dr_diagnostic_dns_failed">DNS نتوانست آدرس سرور را پیدا کند</string>
+    <string name="dr_diagnostic_tcp_ok">پورت TCP سرور در دسترس است</string>
+    <string name="dr_diagnostic_tcp_failed">پورت TCP سرور پاسخ نداد</string>
+    <string name="dr_diagnostic_udp">تست TCP برای این کانفیگ کاربرد ندارد. تونل آن را با Real Delay تست کنید.</string>
+    <string name="dr_routing_profiles">پروفایل‌های مسیریابی واردشده</string>
+    <string name="dr_routing_reconnect">تغییرات پس از اتصال مجدد اعمال می‌شوند. پروفایل‌های هر اشتراک مستقل هستند.</string>
+    <string name="dr_routing_off">استفاده از تنظیمات عمومی مسیریابی</string>
+    <string name="dr_diagnostic_tls_ok">دست‌دهی TLS و بررسی گواهی موفق بود</string>
+    <string name="dr_diagnostic_tls_failed">دست‌دهی TLS یا بررسی گواهی موفق نبود</string>
 </resources>

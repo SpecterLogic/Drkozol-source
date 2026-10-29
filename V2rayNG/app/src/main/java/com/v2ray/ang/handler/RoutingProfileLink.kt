@@ -8,7 +8,7 @@ import java.util.Base64
 object RoutingProfileLink {
     private const val PREFIX = "drkozol://routing/add/"
 
-    fun isLink(value: String): Boolean = value.trim().startsWith(PREFIX)
+    fun isLink(value: String): Boolean = value.trim().startsWith(PREFIX) || HappRoutingParser.isLink(value)
 
     fun parse(value: String): List<RulesetItem>? = try {
         val input = value.trim()

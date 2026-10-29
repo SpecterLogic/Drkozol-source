@@ -562,4 +562,33 @@
     <string name="connection_test_empty_message">ətraflı məlumat yoxdur</string>
     <string name="value_unknown">naməlum</string>
 
+    <string name="dr_backup_password">Ehtiyat nüsxənin şifrəsi</string>
+    <string name="dr_backup_password_help">İxrac üçün istəyə bağlıdır; ən azı 8 simvol. Qorunan nüsxəni bərpa etmək üçün ilkin şifrəni daxil edin. Şifrə saxlanmır.</string>
+    <string name="dr_connection_tools">Connection tools</string>
+    <string name="dr_auto_network">Network for automatic startup</string>
+    <string name="dr_auto_network_help">Applies to automatic startup when opening the app or starting the device. Manual connections remain available.</string>
+    <string name="dr_network_any">Any network</string>
+    <string name="dr_network_wifi">Wi-Fi only</string>
+    <string name="dr_network_mobile">Mobile data only</string>
+    <string name="dr_network_unmetered">Unmetered networks only</string>
+    <string name="dr_warp_import">Import WARP WireGuard profile</string>
+    <string name="dr_warp_import_help">Paste your existing WARP WireGuard configuration. This imports a profile without connecting automatically; it does not create a Cloudflare account.</string>
+    <string name="dr_tools_saved">Profile added</string>
+    <string name="dr_tools_error">Could not complete the operation. Check the profile and try again.</string>
+    <string name="dr_quality_history">Server favorites and probe history</string>
+    <string name="dr_quality_help">Favorites appear first here and have a star in server lists. Quality uses the last 20 Real Delay probes. Failed probes are not packet loss. Basic diagnostics check DNS, TCP and verified TLS where applicable; use Real Delay for the full proxy connection.</string>
+    <string name="dr_favorite_server">Favorite server: %1$s</string>
+    <string name="dr_quality_no_samples">No Real Delay history yet</string>
+    <string name="dr_quality_summary">Probes: %1$d · failed: %2$d%% · average: %3$s ms · jitter: %4$s ms</string>
+    <string name="dr_basic_diagnostic">Run basic diagnostics</string>
+    <string name="dr_diagnostic_dns_ok">DNS resolved the server address</string>
+    <string name="dr_diagnostic_dns_failed">DNS could not resolve the server address</string>
+    <string name="dr_diagnostic_tcp_ok">Server TCP port is reachable</string>
+    <string name="dr_diagnostic_tcp_failed">Server TCP port did not respond</string>
+    <string name="dr_diagnostic_udp">TCP diagnostics do not apply to this profile. Use Real Delay to test its tunnel.</string>
+    <string name="dr_routing_profiles">Imported routing profiles</string>
+    <string name="dr_routing_reconnect">Changes apply after reconnecting. Each provider keeps its own profiles.</string>
+    <string name="dr_routing_off">Use general routing settings</string>
+    <string name="dr_diagnostic_tls_ok">TLS handshake and certificate verification succeeded</string>
+    <string name="dr_diagnostic_tls_failed">TLS handshake or certificate verification failed</string>
 </resources>

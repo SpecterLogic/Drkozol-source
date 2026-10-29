@@ -264,6 +264,28 @@ public static class SmokeTests
                 Check(client.Config.IndexId == beforeSelection, "Invalid and empty selection cannot change server identity");
                 await client.SelectServer(candidates.First().IndexId);
                 Check(client.Config.IndexId == candidates.First().IndexId, "Server row selects stable profile identity");
+                var rejectedProfile = client.SelectedProfile!;
+                var rejectedPort = rejectedProfile.Port;
+                rejectedProfile.Port = 0;
+                try { await client.Connect(false); }
+                finally { rejectedProfile.Port = rejectedPort; }
+                Check(!client.Connected && client.LastConnectionFailure is not null,
+                    "Rejected connection releases busy state for manual diagnostics");
+                window.RenderForSmoke(0, true); window.UpdateLayout();
+                Check(VisualChildren(window).OfType<System.Windows.Controls.Button>().Any(b => Equals(b.Tag, "home-probe") && b.IsEnabled),
+                    "Disconnected Home retains an enabled selected-server test button");
+                var selectedAccount = client.Config.SubIndexId;
+                var unrelatedAccount = new SubItem { Id = Guid.NewGuid().ToString("N"), Remarks = "Expired test provider", ExpiresAt = now - 1 };
+                client.Accounts.Add(unrelatedAccount); client.Config.SubIndexId = unrelatedAccount.Id;
+                try { await client.ProbeCurrent(true); }
+                finally { client.Config.SubIndexId = selectedAccount; client.Accounts.Remove(unrelatedAccount); }
+                Check(!client.Connected && client.Real.ContainsKey(candidates.First().IndexId),
+                    "Offline Home diagnostic uses the selected server's provider without starting a VPN connection");
+                if (Environment.GetEnvironmentVariable("DRKOZOL_SMOKE_SELECTED_PROBE_ONLY") == "1")
+                {
+                    Check(!client.IsTesting && !client.Busy && !client.IsConnecting, "Failed-connection diagnostic restores idle controls");
+                    success = true; return;
+                }
                 await client.Probe(false, candidates); Check(candidates.Any(p => client.Tcp.GetValueOrDefault(p.IndexId) > 0), "Real server TCP ping");
                 await client.SetTun(true);
                 client.Account!.SortOrder = "name";

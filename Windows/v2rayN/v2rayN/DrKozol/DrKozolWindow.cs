@@ -28,6 +28,7 @@ public sealed partial class DrKozolWindow : Window
     private bool _sidebarCollapsed;
     private bool _ready;
     private bool _closing;
+    private bool _closePending;
     private bool _elevating;
     private bool _dark = true;
     private string _search = "";
@@ -37,6 +38,7 @@ public sealed partial class DrKozolWindow : Window
     private TextBox? _url;
     private TextBlock? _speed;
     private TextBlock? _state;
+    private TextBlock? _probeResult;
     private ScrollViewer? _scroll;
     private readonly Dictionary<int, double> _scrollOffsets = [];
     private bool Farsi => _client.Config.UiItem.CurrentLanguage == "fa";
@@ -110,6 +112,7 @@ public sealed partial class DrKozolWindow : Window
             "importError" => T("دریافت ساب ناموفق بود. لینک و اینترنت را بررسی کنید.", "Subscription could not be loaded. Check the URL and network."),
             "connectError" => T("اتصال برقرار نشد. سرور دیگری را امتحان کنید.", "Connection failed. Try another server."),
             "testFirst" => T("ابتدا تست تأخیر را اجرا کنید.", "Run a delay test first."),
+            "probeLocked" => T("اشتراک این سرور غیرفعال یا تمام شده است؛ ابتدا آن را به‌روزرسانی کنید.", "This server's subscription is disabled or exhausted. Refresh it before testing."),
             _ => T("تست کامل نشد. دوباره امتحان کنید.", "The test could not be completed. Try again.")
         }; });
         Loaded += async (_, _) =>
@@ -128,8 +131,20 @@ public sealed partial class DrKozolWindow : Window
         Closing += async (_, e) =>
         {
             if (_closing) return;
-            e.Cancel = true; IsEnabled = false; _visualLifetime.Cancel();
-            try { await _client.Close(); } finally { _closing = true; Close(); }
+            e.Cancel = true;
+            if (_closePending) return;
+            _closePending = true; IsEnabled = false; _visualLifetime.Cancel();
+            try { await _client.Close(); }
+            catch (Exception error) { Logging.SaveLog("DrKozol window shutdown", new Exception(error.GetType().Name)); }
+            finally
+            {
+                _closing = true;
+                // Close may complete synchronously when diagnostics already stopped the client.
+                // Defer the final close until this Closing notification has returned to WPF.
+                if (!Dispatcher.HasShutdownStarted)
+                    try { await Dispatcher.InvokeAsync(() => { if (IsVisible) Close(); }, System.Windows.Threading.DispatcherPriority.Background); }
+                    catch (TaskCanceledException) when (Dispatcher.HasShutdownStarted) { }
+            }
         };
         StateChanged += (_, _) => BuildTitleBar();
         Build();
@@ -238,7 +253,7 @@ public sealed partial class DrKozolWindow : Window
     {
         if (_url is not null) _input = _url.Text;
         if (_scroll is not null) { _scrollOffsets[_tab] = _scroll.VerticalOffset; _scroll.Content = null; }
-        _url = null; _speed = null; _state = null; _delays.Clear(); _quotas.Clear();
+        _url = null; _speed = null; _state = null; _probeResult = null; _delays.Clear(); _quotas.Clear();
         Background = Brush(Palette.Background); Foreground = Ink; _status.Foreground = Accent;
         InstallScrollStyle();
         _shell.Children.Clear(); _shell.RowDefinitions.Clear(); _shell.ColumnDefinitions.Clear();
@@ -370,11 +385,15 @@ public sealed partial class DrKozolWindow : Window
         choices.HorizontalAlignment = HorizontalAlignment.Center; _content.Children.Add(choices);
         _state = Label("", 15, Muted); _state.HorizontalAlignment = HorizontalAlignment.Center; _state.Margin = new Thickness(0, 6, 0, 0); _content.Children.Add(_state);
         _speed = Label("", 11, Muted); _speed.HorizontalAlignment = HorizontalAlignment.Center; _speed.Margin = new Thickness(0, 8, 0, 10); _content.Children.Add(_speed);
-        if (_client.Connected)
+        if (_client.SelectedProfile is { } testProfile && !ServerPresentation.IsAccountInfo(testProfile))
         {
-            var current = HomeAction(T("پینگ کانفیگ متصل", "Ping connected server"), () => _client.ProbeCurrent(true), _client.IsTesting);
+            var current = HomeAction(_client.Connected ? T("پینگ کانفیگ متصل", "Ping connected server") : T("تست کانفیگ انتخاب‌شده", "Test selected server"), () => _client.ProbeCurrent(true), _client.IsTesting);
+            current.Tag = "home-probe";
             current.HorizontalAlignment = HorizontalAlignment.Center;
             current.Margin = new Thickness(0, 0, 0, 8); _content.Children.Add(current);
+            _probeResult = Label("", 12, Muted);
+            _probeResult.HorizontalAlignment = HorizontalAlignment.Center;
+            _content.Children.Add(_probeResult);
         }
         if (_client.IsTesting)
         {
@@ -624,6 +643,10 @@ public sealed partial class DrKozolWindow : Window
         if (_state is not null) _state.Text = _client.IsConnecting ? T("در حال اتصال…", "Connecting…") : _client.IsTesting ? T("در حال تست تأخیر…", "Testing latency…") : _client.Connected ? T("متصل", "Connected") : _client.Busy ? T("در حال انجام عملیات…", "Working…") : T("برای اتصال کلیک کنید", "Tap to connect");
         if (_speed is not null) _speed.Text = _client.Connected ? $"↓ {AccountUsage.Bytes(_client.Down)}/s     ↑ {AccountUsage.Bytes(_client.Up)}/s   ·   {T("مصرف", "Session")} {AccountUsage.Bytes(_client.SessionBytes)}" : "";
         if (_speed is not null && _client.Config.DrKozol.MemoryMonitor) _speed.Text += "  ·  " + T("حافظه: ", "Memory: ") + AccountUsage.Bytes(_client.MemoryBytes);
+        if (_probeResult is not null && _client.SelectedProfile is { } tested)
+            _probeResult.Text = _client.IsTesting ? T("در حال تست…", "Testing…")
+                : !_client.Real.TryGetValue(tested.IndexId, out var latency) ? ""
+                : latency > 0 ? $"Real Delay: {latency} ms" : T("سرور به تست پاسخ نداد", "Server did not respond to the test");
         foreach (var account in _client.Accounts)
             if (_quotas.TryGetValue(account.Id, out var quota))
             {

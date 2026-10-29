@@ -55,6 +55,7 @@ class BootReceiver : BroadcastReceiver() {
             return
         }
 
+        if (!com.v2ray.ang.handler.AutomaticNetworkPolicy.allows(context)) return
         LogUtil.i(AppConfig.TAG, "BootReceiver: Starting V2Ray service")
         LauncherManager.startService(context)
         SubscriptionUpdater.sync(context)

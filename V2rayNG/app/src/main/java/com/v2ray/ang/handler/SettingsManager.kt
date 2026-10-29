@@ -241,6 +241,8 @@ object SettingsManager {
         if (content.isNullOrEmpty()) {
             return false
         }
+        if (HappRoutingParser.isLink(content))
+            return HappRoutingStore.install(com.v2ray.ang.AngApplication.application, HappRoutingStore.importGroup(), content)
 
         try {
             val rulesetList = if (RoutingProfileLink.isLink(content)) RoutingProfileLink.parse(content)?.toMutableList()
@@ -469,7 +471,9 @@ object SettingsManager {
      * Get domestic DNS servers from preference.
      * @return A list of domestic DNS servers.
      */
-    fun getDomesticDnsServers(): List<String> {
+    fun getDomesticDnsServers(guid: String? = MmkvManager.getSelectServer(),
+        imported: HappRoutingProfile? = guid?.let(HappRoutingStore::active)): List<String> {
+        imported?.let { return listOf(it.domesticDns) }
         val domesticDns =
             MmkvManager.decodeSettingsString(AppConfig.PREF_DOMESTIC_DNS) ?: AppConfig.DNS_DIRECT
         val ret = domesticDns.split(",").filter { Utils.isPureIpAddress(it) || Utils.isCoreDNSAddress(it) }
@@ -483,10 +487,12 @@ object SettingsManager {
      * Get remote DNS servers from preference.
      * @return A list of remote DNS servers.
      */
-    fun getRemoteDnsServers(guid: String? = MmkvManager.getSelectServer()): List<String> {
+    fun getRemoteDnsServers(guid: String? = MmkvManager.getSelectServer(),
+        imported: HappRoutingProfile? = guid?.let(HappRoutingStore::active)): List<String> {
         val selected = guid?.let { MmkvManager.decodeServerConfig(it) }
         val custom = selected?.subscriptionId?.let { MmkvManager.decodeSubscription(it)?.tunnelDns }
         val remoteDns = custom?.takeIf { validDnsOverride(it) && it.isNotBlank() }
+            ?: imported?.remoteDns
             ?: remoteDnsDefaultForUpgrade(MmkvManager.decodeSettingsString(AppConfig.PREF_REMOTE_DNS))
         val ret = remoteDns.split(",").filter { Utils.isPureIpAddress(it) || Utils.isCoreDNSAddress(it) }
         if (ret.isEmpty()) {

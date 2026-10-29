@@ -240,7 +240,10 @@ class MainRepository(
         )
     }
 
-    override fun importRoutingProfileLink(content: String): Boolean = SettingsManager.resetRoutingRulesets(content)
+    override fun importRoutingProfileLink(content: String): Boolean =
+        if (com.v2ray.ang.handler.HappRoutingParser.isLink(content))
+            com.v2ray.ang.handler.HappRoutingStore.install(app, getSelectedSubscriptionId(), content)
+        else SettingsManager.resetRoutingRulesets(content)
 
     override fun testCurrentServerRealPing(requestId: String) {
         MessageHelper.sendMsg2ServiceForResult(app, AppConfig.MSG_MEASURE_DELAY, requestId) { handled ->

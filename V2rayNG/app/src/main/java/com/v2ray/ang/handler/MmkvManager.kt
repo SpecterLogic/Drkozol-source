@@ -476,17 +476,47 @@ object MmkvManager {
      * @param testResult The test delay in milliseconds.
      */
     fun encodeServerTestDelayMillis(guid: String, testResult: Long, onlyTcp: Boolean? = null) {
-        if (guid.isBlank()) {
-            return
+        synchronized(serverAffStorage) {
+            serverAffStorage.lock()
+            try {
+                if (guid.isBlank()) return
+                val aff = decodeServerAffiliationInfo(guid) ?: ServerAffiliationInfo()
+                aff.testDelayMillis = testResult
+                when (onlyTcp) {
+                    true -> aff.tcpDelayMillis = testResult
+                    false -> {
+                        aff.realDelayMillis = testResult
+                        if (testResult != 0L) aff.probeHistory =
+                            (aff.probeHistory.orEmpty() + ProbeSample(testResult, System.currentTimeMillis())).takeLast(20)
+                    }
+                    null -> Unit
+                }
+                serverAffStorage.encode(guid, JsonUtil.toJson(aff))
+            } finally { serverAffStorage.unlock() }
         }
-        val aff = decodeServerAffiliationInfo(guid) ?: ServerAffiliationInfo()
-        aff.testDelayMillis = testResult
-        when (onlyTcp) {
-            true -> aff.tcpDelayMillis = testResult
-            false -> aff.realDelayMillis = testResult
-            null -> Unit
-        }
-        serverAffStorage.encode(guid, JsonUtil.toJson(aff))
+    }
+
+    fun setServerFavorite(guid: String, favorite: Boolean): Boolean = synchronized(serverAffStorage) {
+        serverAffStorage.lock()
+        try {
+            if (decodeServerConfig(guid) == null) return@synchronized false
+            val affiliation = decodeServerAffiliationInfo(guid) ?: ServerAffiliationInfo()
+            affiliation.favorite = favorite
+            serverAffStorage.encode(guid, JsonUtil.toJson(affiliation))
+        } finally { serverAffStorage.unlock() }
+    }
+
+    /** Atomic single-key edits shared with workers in other application processes. */
+    fun updateSettingsString(key: String, transform: (String?) -> String): Boolean = synchronized(settingsStorage) {
+        settingsStorage.lock()
+        try {
+            val previous = settingsStorage.decodeString(key)
+            val value = transform(previous)
+            if (settingsStorage.encode(key, value)) true else {
+                if (previous == null) settingsStorage.remove(key) else settingsStorage.encode(key, previous)
+                false
+            }
+        } finally { settingsStorage.unlock() }
     }
 
     /**
@@ -673,6 +703,7 @@ object MmkvManager {
      */
     fun removeSubscription(subid: String) {
         subStorage.remove(subid)
+        settingsStorage.remove("dr_happ_routing_$subid")
         val subsList = decodeSubsList()
         subsList.remove(subid)
         encodeSubsList(subsList)

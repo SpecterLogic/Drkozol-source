@@ -9,7 +9,7 @@
 		<Product>DrKozol</Product>
 		<Company>DrKozol</Company>
 		<Description>DrKozol subscription client</Description>
-		<Version>1.5.0</Version>
+		<Version>1.5.1</Version>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<CETCompat>false</CETCompat>
 	</PropertyGroup>

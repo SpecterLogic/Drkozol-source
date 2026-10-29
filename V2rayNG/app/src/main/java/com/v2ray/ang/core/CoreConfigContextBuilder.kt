@@ -38,21 +38,23 @@ object CoreConfigContextBuilder {
 
         // Step 1: Resolve the main outbound (always tag = TAG_PROXY).
         val primaryResolvedOutbound = resolveOutbound(AppConfig.TAG_PROXY, config) ?: run {
-            LogUtil.e(AppConfig.TAG, "Failed to resolve main outbound for '${config.remarks}'")
+            LogUtil.e(AppConfig.TAG, "Failed to resolve main outbound guid=$guid")
             return null
         }
 
         // Step 2: Resolve all non-builtin routing outbound tags.
-        val routingResolvedOutbounds = resolveRoutingOutbounds()
+        val imported = com.v2ray.ang.handler.HappRoutingStore.active(guid)
+        val routingResolvedOutbounds = resolveRoutingOutbounds(guid, imported)
         val resolvedOutbounds = listOf(primaryResolvedOutbound) + routingResolvedOutbounds
         val fallbackResolvedOutbounds = resolveFallbackOutbounds(resolvedOutbounds)
-        val routingDomainRules = collectRoutingDomainRulesForDns()
+        val routingDomainRules = collectRoutingDomainRulesForDns(guid, imported)
 
         return CoreConfigContext(
             context = context,
             guid = guid,
             resolvedOutbounds = resolvedOutbounds + fallbackResolvedOutbounds,
             routingDomainRules = routingDomainRules,
+            happRouting = imported,
         )
     }
 
@@ -98,8 +100,8 @@ object CoreConfigContextBuilder {
      *
      * Invalid or empty targets are skipped and handled by fallback logic later.
      */
-    private fun resolveRoutingOutbounds(): List<CoreConfigContext.ResolvedOutbound> {
-        val rulesetItems = MmkvManager.decodeRoutingRulesets() ?: return emptyList()
+    private fun resolveRoutingOutbounds(guid: String, imported: com.v2ray.ang.handler.HappRoutingProfile?): List<CoreConfigContext.ResolvedOutbound> {
+        val rulesetItems = com.v2ray.ang.handler.HappRoutingStore.rules(guid, imported)
         val resolvedOutbounds = mutableListOf<CoreConfigContext.ResolvedOutbound>()
         val processedTags = mutableSetOf<String>()
 
@@ -229,8 +231,8 @@ object CoreConfigContextBuilder {
      *
      * outbounds are normalized into three tags only: proxy / direct / block.
      */
-    private fun collectRoutingDomainRulesForDns(): List<CoreConfigContext.RoutingDomainRule> {
-        val rulesetItems = MmkvManager.decodeRoutingRulesets() ?: return emptyList()
+    private fun collectRoutingDomainRulesForDns(guid: String, imported: com.v2ray.ang.handler.HappRoutingProfile?): List<CoreConfigContext.RoutingDomainRule> {
+        val rulesetItems = com.v2ray.ang.handler.HappRoutingStore.rules(guid, imported)
         val result = mutableListOf<CoreConfigContext.RoutingDomainRule>()
 
         rulesetItems

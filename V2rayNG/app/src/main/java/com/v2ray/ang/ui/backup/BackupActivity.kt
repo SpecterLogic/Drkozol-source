@@ -9,11 +9,16 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -29,6 +34,7 @@ import androidx.core.content.FileProvider
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.v2ray.ang.AppConfig
 import com.v2ray.ang.BuildConfig
 import com.v2ray.ang.R
@@ -47,6 +53,9 @@ import com.v2ray.ang.ui.compose.SettingsMenuItem
 import com.v2ray.ang.util.LogUtil
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.CancellationException
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -94,6 +103,7 @@ class BackupActivity : HelperBaseComponentActivity() {
         BackupScreen(
             isLoadingState = viewModel.isLoading,
             webDavConfigState = viewModel.webDavConfig,
+            onPasswordChanged = viewModel::setArchivePassword,
             onBackupOptionSelected = { location ->
                 when (location) {
                     BackupLocation.Local -> backupViaLocal()
@@ -132,17 +142,20 @@ class BackupActivity : HelperBaseComponentActivity() {
     }
 
     private fun handleExportLocal(cachePath: String, targetUri: Uri) {
-        try {
-            contentResolver.openOutputStream(targetUri)?.use { output ->
-                File(cachePath).inputStream().use { input ->
-                    input.copyTo(output)
+        lifecycleScope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    val output = contentResolver.openOutputStream(targetUri) ?: error("Output unavailable")
+                    output.use { destination -> File(cachePath).inputStream().use { it.copyTo(destination) } }
                 }
+                toastSuccess(R.string.toast_success)
+            } catch (cancelled: CancellationException) { throw cancelled }
+            catch (e: Exception) {
+                LogUtil.e(AppConfig.TAG, "Failed to copy backup to Uri", IllegalStateException(e.javaClass.simpleName))
+                toastError(R.string.toast_failure)
+            } finally {
+                withContext(kotlinx.coroutines.NonCancellable + Dispatchers.IO) { File(cachePath).delete() }
             }
-            File(cachePath).delete()
-            toastSuccess(R.string.toast_success)
-        } catch (e: Exception) {
-            LogUtil.e(AppConfig.TAG, "Failed to copy backup to Uri", e)
-            toastError(R.string.toast_failure)
         }
     }
 
@@ -165,18 +178,31 @@ class BackupActivity : HelperBaseComponentActivity() {
             if (uri == null) {
                 return@launchFileChooser
             }
-            try {
-                val targetFile =
-                    File(cacheDir.absolutePath, "${System.currentTimeMillis()}.zip")
-                contentResolver.openInputStream(uri).use { input ->
-                    targetFile.outputStream().use { fileOut ->
-                        input?.copyTo(fileOut)
+            lifecycleScope.launch {
+                val targetFile = File(cacheDir, "${System.nanoTime()}.backup")
+                var handedOff = false
+                try {
+                    withContext(Dispatchers.IO) {
+                        val input = contentResolver.openInputStream(uri) ?: error("Input unavailable")
+                        input.use { source -> targetFile.outputStream().use { output ->
+                            val buffer = ByteArray(32 * 1024); var total = 0L
+                            while (true) {
+                                val count = source.read(buffer); if (count < 0) break
+                                total += count
+                                require(total <= com.v2ray.ang.handler.BackupArchiveCodec.MAX_BYTES + 128)
+                                output.write(buffer, 0, count)
+                            }
+                        } }
                     }
+                    viewModel.restoreConfiguration(cacheDir, targetFile)
+                    handedOff = true
+                } catch (cancelled: CancellationException) { throw cancelled }
+                catch (e: Exception) {
+                    LogUtil.e(AppConfig.TAG, "Error during file restore", IllegalStateException(e.javaClass.simpleName))
+                    toastError(R.string.toast_failure)
+                } finally {
+                    if (!handedOff) withContext(kotlinx.coroutines.NonCancellable + Dispatchers.IO) { targetFile.delete() }
                 }
-                viewModel.restoreConfiguration(cacheDir, targetFile)
-            } catch (e: Exception) {
-                LogUtil.e(AppConfig.TAG, "Error during file restore", e)
-                toastError(R.string.toast_failure)
             }
         }
     }
@@ -186,6 +212,7 @@ class BackupActivity : HelperBaseComponentActivity() {
 fun BackupScreen(
     isLoadingState: StateFlow<Boolean>,
     webDavConfigState: StateFlow<WebDavConfig?>,
+    onPasswordChanged: (String) -> Unit = {},
     onBackupOptionSelected: (BackupLocation) -> Unit,
     onShareClick: () -> Unit,
     onRestoreOptionSelected: (BackupLocation) -> Unit,
@@ -193,8 +220,10 @@ fun BackupScreen(
     onWebDavSave: (WebDavConfig) -> Unit,
     onBackClick: () -> Unit
 ) {
-    val isLoading by isLoadingState.collectAsState()
-    val currentWebDavConfig by webDavConfigState.collectAsState()
+    val isLoading by isLoadingState.collectAsStateWithLifecycle()
+    val currentWebDavConfig by webDavConfigState.collectAsStateWithLifecycle()
+    var archivePassword by remember { mutableStateOf("") }
+    androidx.compose.runtime.DisposableEffect(Unit) { onDispose { onPasswordChanged("") } }
     var showBackupDialog by remember { mutableStateOf(false) }
     var showRestoreDialog by remember { mutableStateOf(false) }
     var showCleanupDialog by remember { mutableStateOf(false) }
@@ -216,8 +245,18 @@ fun BackupScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
+                .consumeWindowInsets(innerPadding)
+                .imePadding()
                 .verticalScroll(rememberScrollState())
         ) {
+            OutlinedTextField(value = archivePassword, onValueChange = {
+                archivePassword = it
+                onPasswordChanged(it)
+            }, enabled = !isLoading, modifier = Modifier.fillMaxWidth().padding(16.dp),
+                singleLine = true, visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                label = { Text(stringResource(R.string.dr_backup_password)) },
+                supportingText = { Text(stringResource(R.string.dr_backup_password_help)) },
+                isError = archivePassword.isNotEmpty() && archivePassword.length < 8)
             SettingsMenuItem(
                 icon = painterResource(R.drawable.ic_backup_24dp),
                 title = stringResource(R.string.title_configuration_backup),

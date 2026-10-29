@@ -26,5 +26,7 @@ data class SubscriptionItem(
     var connectionStyle: String = "classic",
     var customRemarks: Boolean = false,
     var probeMethod: String = "real",
+    var happRoutingProfiles: List<com.v2ray.ang.handler.HappRoutingProfile> = emptyList(),
+    var activeHappRoutingProfile: String? = null,
 )
 

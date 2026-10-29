@@ -126,6 +126,7 @@ public sealed class DrKozolWindow : Window
         "expired" => T("جهت تمدید اقدام نمایید", "Please renew your subscription"),
         "probeError" => T("آزمون اتصال پاسخ نداد. دوباره تست کنید یا سرور دیگری انتخاب کنید.", "The connection test did not respond. Retry or choose another server."),
         "testFirst" => T("ابتدا Real Delay یا TCP Ping را اجرا کنید.", "Run Real Delay or TCP Ping first."),
+        "probeLocked" => T("اشتراک این سرور غیرفعال یا تمام شده است؛ ابتدا آن را به‌روزرسانی کنید.", "This server's subscription is disabled or exhausted. Refresh it before testing."),
         "tcpNotApplicable" => T("این کانفیگ از UDP استفاده می‌کند؛ برای آن Real Delay را اجرا کنید.", "This configuration uses UDP. Use Real Delay for this server."),
         "startup" => T("راه‌اندازی کامل نشد. برنامه را ببندید و دوباره باز کنید.", "Startup did not complete. Close and reopen the app."),
         "operation" => T("عملیات کامل نشد. دوباره امتحان کنید.", "The operation did not complete. Try again."),
@@ -318,9 +319,9 @@ public sealed class DrKozolWindow : Window
         choices.HorizontalAlignment = HorizontalAlignment.Center; _content.Children.Add(choices);
         _state = Label("", 14, false, Muted); _state.HorizontalAlignment = HorizontalAlignment.Center; _content.Children.Add(_state);
         _speed = Label("", 11, false, Muted); _speed.HorizontalAlignment = HorizontalAlignment.Center; _speed.MinHeight = 16; _speed.Margin = new Thickness(0, 0, 0, 6); _content.Children.Add(_speed);
-        if (_client.Connected)
+        if (_client.SelectedProfile is { } testProfile && !ServerPresentation.IsAccountInfo(testProfile))
         {
-            var current = Row(HomeAction(T("پینگ اتصال فعلی", "Ping current connection"), () => _client.ProbeCurrent(true), _client.IsTesting));
+            var current = Row(HomeAction(_client.Connected ? T("پینگ اتصال فعلی", "Ping current connection") : T("تست کانفیگ انتخاب‌شده", "Test selected server"), () => _client.ProbeCurrent(true), _client.IsTesting));
             current.HorizontalAlignment = HorizontalAlignment.Center; _content.Children.Add(current);
             _activeDelay = Label("", 11, false, Muted); _activeDelay.HorizontalAlignment = HorizontalAlignment.Center; _content.Children.Add(_activeDelay);
         }

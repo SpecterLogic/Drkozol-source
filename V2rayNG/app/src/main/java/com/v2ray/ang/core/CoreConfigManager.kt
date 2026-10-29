@@ -159,7 +159,7 @@ object CoreConfigManager {
         v2rayConfig.log.loglevel = MmkvManager.decodeSettingsString(AppConfig.PREF_LOGLEVEL) ?: "warning"
         v2rayConfig.remarks = primaryResolvedOutbound.profile.remarks
 
-        configureInbounds(v2rayConfig)
+        configureInbounds(configContext, v2rayConfig)
 
         if (v2rayConfig.outbounds.isNotEmpty()) {
             v2rayConfig.outbounds.removeAt(0)
@@ -181,9 +181,9 @@ object CoreConfigManager {
             )
         }
 
-        // User routing rules (policyGroupBalancerTags rewrites TAG_PROXY→balancer when main is POLICYGROUP).
+        // User routing rules (policyGroupBalancerTags rewrites TAG_PROXYÃ¢â€ â€™balancer when main is POLICYGROUP).
         configureRouting(configContext, v2rayConfig, policyGroupBalancerTags)
-        configureFakeDns(v2rayConfig)
+        configureFakeDns(configContext, v2rayConfig)
         configureDns(configContext, v2rayConfig, policyGroupBalancerTags)
         configureLocalDns(configContext, v2rayConfig)
         configureRootModeDns(v2rayConfig)
@@ -492,7 +492,7 @@ object CoreConfigManager {
     /**
      * Configure inbound listeners and related runtime options.
      */
-    private fun configureInbounds(v2rayConfig: V2rayConfig) {
+    private fun configureInbounds(configContext: CoreConfigContext, v2rayConfig: V2rayConfig) {
         val vpn = SettingsManager.isVpnMode()
         val useHev = SettingsManager.isUsingHevTun()
         val forcedByHev = vpn && useHev
@@ -526,7 +526,7 @@ object CoreConfigManager {
             inbound1.settings?.auth = "noauth"
             inbound1.settings?.accounts = null
         }
-        val fakedns = MmkvManager.decodeSettingsBool(AppConfig.PREF_FAKE_DNS_ENABLED) == true
+        val fakedns = com.v2ray.ang.handler.HappRoutingStore.fakeDns(configContext.guid, configContext.happRouting)
         val sniffAllTlsAndHttp =
             MmkvManager.decodeSettingsBool(AppConfig.PREF_SNIFFING_ENABLED, true) != false
         inbound1.sniffing?.enabled = fakedns || sniffAllTlsAndHttp
@@ -564,9 +564,9 @@ object CoreConfigManager {
     /**
      * Enable fake DNS when local DNS and fake DNS are both enabled.
      */
-    private fun configureFakeDns(v2rayConfig: V2rayConfig) {
+    private fun configureFakeDns(configContext: CoreConfigContext, v2rayConfig: V2rayConfig) {
         if (MmkvManager.decodeSettingsBool(AppConfig.PREF_LOCAL_DNS_ENABLED, AppConfig.DEFAULT_LOCAL_DNS_ENABLED)
-            && MmkvManager.decodeSettingsBool(AppConfig.PREF_FAKE_DNS_ENABLED) == true
+            && com.v2ray.ang.handler.HappRoutingStore.fakeDns(configContext.guid, configContext.happRouting)
         ) {
             v2rayConfig.fakedns = listOf(V2rayConfig.FakednsBean())
         }
@@ -618,7 +618,7 @@ object CoreConfigManager {
             return
         }
 
-        if (MmkvManager.decodeSettingsBool(AppConfig.PREF_FAKE_DNS_ENABLED) == true) {
+        if (com.v2ray.ang.handler.HappRoutingStore.fakeDns(configContext.guid, configContext.happRouting)) {
             val geositeCn = arrayListOf(AppConfig.GEOSITE_CN)
             val routingDomains = configContext.routingDomainRules
                 .asSequence()
@@ -722,7 +722,7 @@ object CoreConfigManager {
         val servers = ArrayList<Any>()
 
         //remote Dns
-        val remoteDns = SettingsManager.getRemoteDnsServers(configContext.guid)
+        val remoteDns = SettingsManager.getRemoteDnsServers(configContext.guid, configContext.happRouting)
         val proxyDomain = (collectUserRuleDomainsByTag(AppConfig.TAG_PROXY) + collectCustomOutboundDomains()).distinct()
         remoteDns.forEach {
             servers.add(it)
@@ -861,8 +861,8 @@ object CoreConfigManager {
         policyGroupBalancerTags: Map<String, String>,
     ) {
         val servers = ArrayList<Any>()
-        val remoteDns = SettingsManager.getRemoteDnsServers(configContext.guid)
-        val domesticDns = SettingsManager.getDomesticDnsServers()
+        val remoteDns = SettingsManager.getRemoteDnsServers(configContext.guid, configContext.happRouting)
+        val domesticDns = SettingsManager.getDomesticDnsServers(configContext.guid, configContext.happRouting)
 
         remoteDns.forEach { servers.add(it) }
 
@@ -950,6 +950,7 @@ object CoreConfigManager {
         hosts[AppConfig.DNS_SB_DOMAIN] = AppConfig.DNS_SB_ADDRESSES
         hosts[AppConfig.DNS_YANDEX_DOMAIN] = AppConfig.DNS_YANDEX_ADDRESSES
 
+        configContext.happRouting?.hosts?.let { hosts.putAll(it) }
         val userHosts = MmkvManager.decodeSettingsString(AppConfig.PREF_DNS_HOSTS)
         if (userHosts.isNotNullEmpty()) {
             val userHostsMap = userHosts?.split(",").orEmpty()
@@ -1156,17 +1157,20 @@ object CoreConfigManager {
         policyGroupBalancerTags: Map<String, String>
     ) {
 
-        v2rayConfig.routing.domainStrategy =
-            MmkvManager.decodeSettingsString(AppConfig.PREF_ROUTING_DOMAIN_STRATEGY)
+        val imported = configContext.happRouting
+        v2rayConfig.routing.domainStrategy = imported?.domainStrategy
+            ?: MmkvManager.decodeSettingsString(AppConfig.PREF_ROUTING_DOMAIN_STRATEGY)
                 ?: "AsIs"
 
         applyLanProxyRouting(v2rayConfig,
             MmkvManager.decodeSettingsBool(com.v2ray.ang.handler.ClientOption.ROUTE_LAN.key, false),
             policyGroupBalancerTags[AppConfig.TAG_PROXY])
-        val rulesetItems = MmkvManager.decodeRoutingRulesets()
-        rulesetItems?.forEach { key ->
+        val rulesetItems = com.v2ray.ang.handler.HappRoutingStore.rules(configContext.guid, configContext.happRouting)
+        rulesetItems.forEach { key ->
             appendRoutingUserRule(configContext, key, v2rayConfig, policyGroupBalancerTags)
         }
+        if (imported?.globalProxy == false)
+            v2rayConfig.routing.rules.add(V2rayConfig.RoutingBean.RulesBean(network = "tcp,udp", outboundTag = AppConfig.TAG_DIRECT))
     }
 
     internal fun applyLanProxyRouting(config: V2rayConfig, enabled: Boolean, balancerTag: String?) {

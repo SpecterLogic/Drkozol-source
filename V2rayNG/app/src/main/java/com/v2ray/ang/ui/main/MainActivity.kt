@@ -103,7 +103,8 @@ class MainActivity : HelperBaseComponentActivity() {
         if (savedInstanceState == null) lifecycleScope.launch {
             if (!mainViewModel.awaitInitialPage()) return@launch
             val preferences = withContext(Dispatchers.IO) { com.v2ray.ang.handler.SettingsManager.clientPreferences() }
-            if (preferences.enabled(com.v2ray.ang.handler.ClientOption.AUTO_CONNECT) && !mainViewModel.uiState.value.selectedGuid.isNullOrEmpty()) requestServiceStart()
+            if (preferences.enabled(com.v2ray.ang.handler.ClientOption.AUTO_CONNECT) && !mainViewModel.uiState.value.selectedGuid.isNullOrEmpty()
+                && com.v2ray.ang.handler.AutomaticNetworkPolicy.allows(this@MainActivity)) requestServiceStart()
             if (preferences.enabled(com.v2ray.ang.handler.ClientOption.UPDATE_LAUNCH)) mainViewModel.onAction(MainAction.UpdateSubscriptions)
             else if (preferences.enabled(com.v2ray.ang.handler.ClientOption.PING_LAUNCH)) mainViewModel.testAllRealPing(ignoreCategory = true)
         }
@@ -208,6 +209,7 @@ class MainActivity : HelperBaseComponentActivity() {
             MainDestination.Routing -> Intent(this, RoutingSettingActivity::class.java)
             MainDestination.UserAssets -> Intent(this, UserAssetActivity::class.java)
             MainDestination.Settings -> Intent(this, SettingsActivity::class.java)
+            MainDestination.ConnectionTools -> Intent(this, com.v2ray.ang.ui.tools.ConnectionToolsActivity::class.java)
             MainDestination.Logcat -> Intent(this, LogcatActivity::class.java)
             MainDestination.CheckUpdate -> Intent(this, CheckUpdateActivity::class.java)
             MainDestination.BackupRestore -> Intent(this, BackupActivity::class.java)

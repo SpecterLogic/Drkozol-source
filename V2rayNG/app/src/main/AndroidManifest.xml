@@ -69,6 +69,7 @@
         <service android:name="org.amnezia.awg.backend.GoBackend$VpnService"
             android:process=":RunSoLibV2RayDaemon" android:exported="false" tools:replace="android:exported" />
 
+        <activity android:name=".ui.tools.ConnectionToolsActivity" android:exported="false" />
         <service
             android:name="androidx.appcompat.app.AppLocalesMetadataHolderService"
             android:enabled="false"
@@ -221,6 +222,12 @@
         <activity
             android:name=".ui.UrlSchemeActivity"
             android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="happ" android:host="routing" />
+            </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />
                 <category android:name="android.intent.category.DEFAULT" />

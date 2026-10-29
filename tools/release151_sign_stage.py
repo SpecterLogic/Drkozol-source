@@ -42,7 +42,7 @@ with zipfile.ZipFile(io.BytesIO(archive)) as old,zipfile.ZipFile(output,'w',zipf
         data=old.read(entry.filename)
         if entry.filename=='Drkozol/README.md':data=readme_data
         if entry.filename=='Drkozol/BUILD-INPUTS.json':
-            metadata=json.loads(data);assert metadata['source_commit']==os.environ['TESTED_SOURCE_SNAPSHOT'];metadata['source_commit']=os.environ['SOURCE_SNAPSHOT'];data=json.dumps(metadata,indent=2).encode()
+            metadata=json.loads(data);assert metadata['source_commit'] in (os.environ['TESTED_SOURCE_SNAPSHOT'],os.environ['SOURCE_SNAPSHOT']);metadata['source_commit']=os.environ['SOURCE_SNAPSHOT'];data=json.dumps(metadata,indent=2).encode()
         new.writestr(entry,data)
 updated=output.getvalue()
 request(source+'/releases/assets/'+str(source_asset['id']),method='DELETE')

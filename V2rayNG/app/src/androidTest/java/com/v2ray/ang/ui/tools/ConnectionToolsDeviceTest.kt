@@ -59,7 +59,12 @@ class ConnectionToolsDeviceTest {
             waitFor { MmkvManager.decodeSettingsString(AutomaticNetworkPolicy.KEY) == "wifi" }
             val mobile = strings.getString(com.v2ray.ang.R.string.dr_network_mobile)
             waitFor { control(mobile)?.isEnabled == true }
-            assertTrue(control(mobile)!!.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_FOCUS))
+            // Android 15 stays in touch mode after the tap; a real D-pad event enters
+            // keyboard mode before requesting input focus on a Compose virtual node.
+            instrumentation.uiAutomation.executeShellCommand("input keyevent KEYCODE_DPAD_DOWN").use { descriptor ->
+                android.os.ParcelFileDescriptor.AutoCloseInputStream(descriptor).use { it.readBytes() }
+            }
+            waitFor { control(mobile)?.let { it.isFocused || it.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_FOCUS) } == true }
             instrumentation.uiAutomation.executeShellCommand("input keyevent KEYCODE_DPAD_CENTER").use { descriptor ->
                 android.os.ParcelFileDescriptor.AutoCloseInputStream(descriptor).use { it.readBytes() }
             }

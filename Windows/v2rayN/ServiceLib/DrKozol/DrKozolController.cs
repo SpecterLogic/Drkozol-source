@@ -833,6 +833,7 @@ public sealed class DrKozolController
         try
         {
             await _tests.RunLoop(real ? ESpeedActionType.Realping : ESpeedActionType.Tcping, list.Where(p => p.AmneziaConfig is null).ToList(), probeToken);
+            probeToken.ThrowIfCancellationRequested();
             foreach (var profile in list.Where(p => p.AmneziaConfig is not null))
             {
                 var delay = -1;

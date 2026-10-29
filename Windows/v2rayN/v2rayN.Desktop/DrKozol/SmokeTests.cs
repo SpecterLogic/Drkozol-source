@@ -90,6 +90,11 @@ internal static class SmokeTests
                 Check(stopPower.IsEnabled, "Linux power remains enabled while testing");
                 stopPower.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent)); await cancelledProbe;
                 Check(client.LastProbeCancelled && !client.IsTesting && !client.Busy && !client.Connected, "Linux power cancels best-server tests without connecting afterward");
+                var cancelledVless = client.Probe(true, candidates);
+                await window.RenderForSmoke(0, "Dark", "ocean"); await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Loaded); window.UpdateLayout();
+                window.GetVisualDescendants().OfType<Button>().First(b => Avalonia.Automation.AutomationProperties.GetName(b) is "Stop tests" or "توقف تست").RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
+                await cancelledVless;
+                Check(client.LastProbeCancelled && !client.Busy, "Linux VLESS-only cancellation is preserved");
                 await client.Probe(true, candidates); Check(candidates.Any(p => client.Real.GetValueOrDefault(p.IndexId) > 0), "Live Linux XHTTP TLS Real Delay with TUN selected");
                 Check(client.Account.SortOrder == "ping", "Completed Linux tests restore latency ordering");
                 await client.SetTun(false);

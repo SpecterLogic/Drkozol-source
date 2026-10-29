@@ -274,6 +274,11 @@ public static class SmokeTests
                 Check(stopPower.IsEnabled, "Power remains enabled during latency testing");
                 stopPower.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); await cancelledProbe;
                 Check(client.LastProbeCancelled && !client.IsTesting && !client.Busy && !client.Connected, "Power cancels best-server testing without subsequently connecting");
+                var cancelledVless = client.Probe(true, candidates);
+                window.RenderForSmoke(0, true); window.UpdateLayout();
+                VisualChildren(window).OfType<Button>().First(b => System.Windows.Automation.AutomationProperties.GetName(b) is "Stop tests" or "توقف تست").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                await cancelledVless;
+                Check(client.LastProbeCancelled && !client.Busy, "VLESS-only tests also retain their cancellation result");
                 await client.Probe(true, candidates); Check(candidates.Any(p => client.Real.GetValueOrDefault(p.IndexId) > 0), "Real XHTTP/TLS delay with TUN selected before connection");
                 Check(client.Account.SortOrder == "ping", "Completed tests restore automatic latency ordering");
                 await client.SetTun(false);

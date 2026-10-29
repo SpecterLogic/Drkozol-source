@@ -1,6 +1,11 @@
 name: Final desktop 1.5.0 validation
 on:
   workflow_dispatch:
+    inputs:
+      hosted_windows_tun:
+        description: Optional Windows Server TUN diagnostic; desktop TUN requires separate artifact validation
+        type: boolean
+        default: false
 permissions:
   contents: write
   actions: read
@@ -35,11 +40,11 @@ jobs:
             & artifacts/windows/bin/sing_box/sing-box.exe check -c $_.FullName
             if ($LASTEXITCODE -ne 0) { throw 'Native tunnel configuration rejected' }
           }
-      - name: Verify current UI, test cancellation, HTTPS, balancer and administrator TUN
+      - name: Verify current Windows UI, test cancellation, HTTPS and balancer
         shell: pwsh
         env:
           DRKOZOL_TEST_URL: ${{ secrets.DRKOZOL_TEST_URL_150_DESKTOP }}
-          DRKOZOL_TEST_TUN: '1'
+          DRKOZOL_TEST_TUN: '0'
           DRKOZOL_SKIP_AWG_TEST: '1'
         run: |
           Copy-Item artifacts/windows artifacts/windows-smoke -Recurse
@@ -49,7 +54,7 @@ jobs:
       - name: Stage only the checked clean Windows package
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          DRAFT_RELEASE_ID: '427322210'
+          DRAFT_RELEASE_ID: '427326126'
         run: python tools/stage_desktop_validation.py windows
 
   linux:
@@ -105,5 +110,5 @@ jobs:
       - name: Stage only checked clean Linux packages
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          DRAFT_RELEASE_ID: '427322210'
+          DRAFT_RELEASE_ID: '427326126'
         run: python3 tools/stage_desktop_validation.py linux

@@ -62,7 +62,11 @@ public class Desktop146CompatibilityTests
         await document["inbounds"]![0]!["strict_route"]!.GetValue<bool>().Should().BeTrue();
         await document["route"]!["rules"]![0]!["action"]!.GetValue<string>().Should().BeEqualTo("hijack-dns");
         var output = Environment.GetEnvironmentVariable("DRKOZOL_CONFIG_VALIDATION_OUTPUT");
-        if (output is not null) await File.WriteAllTextAsync(Path.Combine(output, "transport-exclusions.json"), document.ToJsonString());
+        if (output is not null)
+        {
+            Directory.CreateDirectory(output);
+            await File.WriteAllTextAsync(Path.Combine(output, "transport-exclusions.json"), document.ToJsonString());
+        }
     }
 
     [Test]

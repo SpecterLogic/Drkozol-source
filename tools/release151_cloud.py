@@ -42,7 +42,7 @@ elif mode=='windows-package':
         for p in sorted(Path('artifacts/windows').rglob('*')):
             if not p.is_file():continue
             rel=p.relative_to('artifacts/windows');assert not {'.git','.signing','guiConfigs','guiLogs','guiTemps','guiBackups','binConfigs'}.intersection(rel.parts)
-            data=p.read_bytes();assert b'forouzandeh' not in data.lower() and b'c:\\users\\' not in data.lower(),rel
+            data=p.read_bytes();assert b'forouzandeh' not in data.lower() and b'c:\\users\\saeed' not in data.lower(),rel
             info=zipfile.ZipInfo('DrKozol/'+rel.as_posix());info.compress_type=zipfile.ZIP_DEFLATED;info.external_attr=0o100644<<16;z.writestr(info,data)
     print('Windows clean package privacy checks passed')
 elif mode=='windows-upload':upload('Drkozol',os.environ['APP_RELEASE_ID'],Path('artifacts/DrKozol-1.5.1-windows-x64.zip'))

@@ -267,13 +267,13 @@ public static class SmokeTests
                 await client.Probe(false, candidates); Check(candidates.Any(p => client.Tcp.GetValueOrDefault(p.IndexId) > 0), "Real server TCP ping");
                 await client.SetTun(true);
                 client.Account!.SortOrder = "name";
-                var cancelledProbe = client.Probe(true, candidates);
+                var cancelledProbe = client.ConnectBest();
                 window.RenderForSmoke(0, true);
                 window.UpdateLayout();
                 var stopPower = VisualChildren(window).OfType<Button>().First(b => System.Windows.Automation.AutomationProperties.GetName(b) is "Stop tests" or "توقف تست");
                 Check(stopPower.IsEnabled, "Power remains enabled during latency testing");
                 stopPower.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); await cancelledProbe;
-                Check(!client.IsTesting && !client.Busy, "Power cancels tests and restores the controls");
+                Check(client.LastProbeCancelled && !client.IsTesting && !client.Busy && !client.Connected, "Power cancels best-server testing without subsequently connecting");
                 await client.Probe(true, candidates); Check(candidates.Any(p => client.Real.GetValueOrDefault(p.IndexId) > 0), "Real XHTTP/TLS delay with TUN selected before connection");
                 Check(client.Account.SortOrder == "ping", "Completed tests restore automatic latency ordering");
                 await client.SetTun(false);
@@ -328,6 +328,7 @@ public static class SmokeTests
                 Check(client.Connected && client.HomeChoice == "balancer" && client.SelectedProfile?.ConfigType == EConfigType.PolicyGroup,
                     "Balancer starts a real multi-server policy group");
                 var memberIds = (client.SelectedProfile!.GetProtocolExtra().ChildItems ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries);
+                Check(memberIds.Length is >= 2 and <= 3 && memberIds.All(id => client.Real.GetValueOrDefault(id) > 0), "Default balancer contains only the fastest measured members");
                 checks.Add($"Balancer membership: {memberIds.Length} total; {memberIds.Count(id => client.Real.GetValueOrDefault(id) > 0)} tested healthy");
                 // A replaced native core owns new TCP connections. Do not reuse the old
                 // single-server HTTP pool after deliberately disconnecting its SOCKS stream.

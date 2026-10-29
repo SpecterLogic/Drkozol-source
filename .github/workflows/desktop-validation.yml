@@ -49,7 +49,7 @@ jobs:
       - name: Stage only the checked clean Windows package
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          DRAFT_RELEASE_ID: '427313726'
+          DRAFT_RELEASE_ID: '427319538'
         run: python tools/stage_desktop_validation.py windows
 
   linux:
@@ -105,5 +105,5 @@ jobs:
       - name: Stage only checked clean Linux packages
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          DRAFT_RELEASE_ID: '427313726'
+          DRAFT_RELEASE_ID: '427319538'
         run: python3 tools/stage_desktop_validation.py linux

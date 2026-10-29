@@ -82,14 +82,14 @@ internal static class SmokeTests
                 Check(candidates.Count > 0, "Live subscription contains imported XHTTP candidates");
                 await client.Probe(false, candidates); Check(candidates.Any(p => client.Tcp.GetValueOrDefault(p.IndexId) > 0), "Live TCP ping through Linux native client");
                 await client.SetTun(true); client.Account!.SortOrder = "name";
-                var cancelledProbe = client.Probe(true, candidates);
+                var cancelledProbe = client.ConnectBest();
                 await window.RenderForSmoke(0, "Dark", "ocean");
                 await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Loaded);
                 window.UpdateLayout();
                 var stopPower = window.GetVisualDescendants().OfType<Button>().First(b => Avalonia.Automation.AutomationProperties.GetName(b) is "Stop tests" or "توقف تست");
                 Check(stopPower.IsEnabled, "Linux power remains enabled while testing");
                 stopPower.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent)); await cancelledProbe;
-                Check(!client.IsTesting && !client.Busy, "Linux power cancels tests and restores controls");
+                Check(client.LastProbeCancelled && !client.IsTesting && !client.Busy && !client.Connected, "Linux power cancels best-server tests without connecting afterward");
                 await client.Probe(true, candidates); Check(candidates.Any(p => client.Real.GetValueOrDefault(p.IndexId) > 0), "Live Linux XHTTP TLS Real Delay with TUN selected");
                 Check(client.Account.SortOrder == "ping", "Completed Linux tests restore latency ordering");
                 await client.SetTun(false);
@@ -172,6 +172,7 @@ internal static class SmokeTests
                 Check(client.Connected && client.HomeChoice == "balancer" && client.SelectedProfile?.ConfigType == EConfigType.PolicyGroup,
                     "Balancer starts a real multi-server policy group");
                 var memberIds = (client.SelectedProfile!.GetProtocolExtra().ChildItems ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries);
+                Check(memberIds.Length is >= 2 and <= 3 && memberIds.All(id => client.Real.GetValueOrDefault(id) > 0), "Linux default balancer uses only the fastest measured members");
                 checks.Add($"Balancer membership: {memberIds.Length} total; {memberIds.Count(id => client.Real.GetValueOrDefault(id) > 0)} tested healthy");
                 // A replaced native core owns new TCP connections. Do not reuse the old
                 // single-server HTTP pool after deliberately disconnecting its SOCKS stream.

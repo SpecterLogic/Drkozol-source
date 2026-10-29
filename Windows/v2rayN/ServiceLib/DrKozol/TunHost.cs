@@ -91,13 +91,13 @@ public sealed class TunHost : IAsyncDisposable
         // the protocol engines back into their own SOCKS listener; DNS for applications uses DoH.
         var configuration = $$$"""
         {
-          "log": {"disabled": true},
+          "log": {"level": "error"},
           "dns": {"servers": [{"type":"https","tag":"remote","server":"1.1.1.1","detour":"proxy","tls":{"enabled":true,"server_name":"cloudflare-dns.com"}}],"final":"remote"},
           "inbounds": [{"type":"tun","tag":"tun","interface_name":"DrKozol","address":["172.29.255.1/30","fdfe:dcba:9876::1/126"],"dns_mode":"hijack","dns_address":["172.29.255.2","fdfe:dcba:9876::2"],"mtu":1400,"auto_route":true,"strict_route":true,"stack":"mixed"}],
           "outbounds": [{"type":"socks","tag":"proxy","server":"127.0.0.1","server_port":{{{port}}},"version":"5"},{"type":"direct","tag":"direct"}],
           "route": {"auto_detect_interface":true,"default_domain_resolver":"remote","rules":[
-            {"process_name":["xray.exe","drkozol-awg.exe","sing-box.exe","xray","drkozol-awg","sing-box"],"action":"route","outbound":"direct"},
             {"port":53,"action":"hijack-dns"},
+            {"process_name":["xray.exe","drkozol-awg.exe","sing-box.exe","xray","drkozol-awg","sing-box"],"action":"route","outbound":"direct"},
             {"ip_is_private":true,"action":"route","outbound":"direct"}
           ],"final":"proxy"}
         }
@@ -158,7 +158,7 @@ public sealed class TunHost : IAsyncDisposable
         _process.OutputDataReceived += (_, _) => { };
         _process.ErrorDataReceived += (_, line) => {
             if (line.Data is not { } text) return;
-            foreach (var reason in new[] { "permission denied", "operation not permitted", "not supported", "invalid argument", "file exists", "device or resource busy", "network is unreachable", "no such file", "missing default interface" })
+            foreach (var reason in new[] { "permission denied", "operation not permitted", "not supported", "invalid argument", "file exists", "device or resource busy", "network is unreachable", "no such file", "missing default interface", "dns", "certificate", "timeout", "connection refused" })
                 if (text.Contains(reason, StringComparison.OrdinalIgnoreCase)) StartupFailure = reason;
         };
         if (!_process.Start()) throw new IOException();

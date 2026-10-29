@@ -26,6 +26,7 @@ public sealed class DrKozolController
     public long MemoryBytes => Environment.WorkingSet;
     public bool SystemDarkTheme { get; private set; } = true;
     public bool LastProbeReal { get; private set; } = true;
+    public bool LastProbeCancelled { get; private set; }
     public IEnumerable<ProfileItem> OrderProfiles(IEnumerable<ProfileItem> source, string? accountId) =>
         DesktopPreferences.OrderProfiles(source, LastProbeReal ? Real : Tcp,
             Accounts.FirstOrDefault(a => a.Id == accountId)?.SortOrder ?? Config.DrKozol.SortOrder);
@@ -332,6 +333,7 @@ public sealed class DrKozolController
         if (best is null && !Connected)
         {
             await Probe(true, eligible);
+            if (LastProbeCancelled) return;
             best = eligible.Where(p => Real.GetValueOrDefault(p.IndexId) > 0).OrderBy(p => Real[p.IndexId]).FirstOrDefault();
         }
         if (best is null) { Notice?.Invoke("testFirst"); return; }
@@ -347,7 +349,15 @@ public sealed class DrKozolController
             && p.AmneziaConfig is null && Real.GetValueOrDefault(p.IndexId, 1) > 0)
             .OrderBy(p => Real.GetValueOrDefault(p.IndexId) > 0 ? Real[p.IndexId] : int.MaxValue).ToList();
         var healthy = eligible.Where(p => Real.GetValueOrDefault(p.IndexId) > 0).ToList();
-        if (healthy.Count >= 2) eligible = healthy;
+        if (healthy.Count < 2 && !Connected)
+        {
+            await Probe(true, eligible);
+            if (LastProbeCancelled) return;
+            healthy = eligible.Where(p => Real.GetValueOrDefault(p.IndexId) > 0).ToList();
+        }
+        // Keep the default group small and measured: an intermittently failing slow peer
+        // must not degrade every new application connection just because it was imported.
+        eligible = healthy.Take(3).ToList();
         if (eligible.Count < 2 || Account is null) { Notice?.Invoke("balancerUnavailable"); return; }
         var profile = Profiles.FirstOrDefault(p => p.DrKozolGeneratedBalancer)
             ?? new ProfileItem { IndexId = Guid.NewGuid().ToString("N"), Subid = Account.Id, Remarks = "Balancer", IsSub = false, DrKozolGeneratedBalancer = true, ConfigType = EConfigType.PolicyGroup, CoreType = ECoreType.Xray };
@@ -801,6 +811,7 @@ public sealed class DrKozolController
     private async Task ProbeCore(bool real, IEnumerable<ProfileItem> profiles)
     {
         if (Busy || Connected || Account is null || AccountUsage.Locked(Account)) return;
+        LastProbeCancelled = false;
         _workBusy = true; Changed?.Invoke();
         var target = real ? Real : Tcp;
         LastProbeReal = real;
@@ -838,7 +849,7 @@ public sealed class DrKozolController
                 await SQLiteHelper.Instance.ReplaceAsync(account);
             }
         }
-        catch (OperationCanceledException) { }
+        catch (OperationCanceledException) { LastProbeCancelled = true; }
         catch (Exception) { Notice?.Invoke("probeError"); }
         finally { _workBusy = false; _tests = null; _probeCancellation?.Dispose(); _probeCancellation = null; Changed?.Invoke(); }
     }

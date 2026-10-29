@@ -35,6 +35,25 @@ public sealed class AmneziaHost : IAsyncDisposable
         }
         catch { return null; }
     }
+    public static async Task<IPAddress[]> EndpointAddresses(string raw, CancellationToken token)
+    {
+        var decoded = Decode(raw) ?? throw new InvalidDataException("Invalid AmneziaWG configuration");
+        var addresses = new List<IPAddress>();
+        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(token);
+        deadline.CancelAfter(TimeSpan.FromSeconds(8));
+        foreach (var line in decoded.Split('\n'))
+        {
+            var parts = line.Split('=', 2, StringSplitOptions.TrimEntries);
+            if (parts.Length != 2 || !parts[0].Equals("Endpoint", StringComparison.OrdinalIgnoreCase)) continue;
+            var value = parts[1].Split('#', 2)[0].Trim();
+            if (!Uri.TryCreate("udp://" + value, UriKind.Absolute, out var endpoint) || endpoint.Port is < 1 or > 65535)
+                throw new InvalidDataException("Invalid AmneziaWG endpoint");
+            if (IPAddress.TryParse(endpoint.DnsSafeHost, out var address)) addresses.Add(address);
+            else addresses.AddRange(await Dns.GetHostAddressesAsync(endpoint.DnsSafeHost, deadline.Token));
+        }
+        return addresses.Distinct().ToArray();
+    }
+
     public async Task Start(string raw, int port, bool check = false)
     {
         var ready = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);

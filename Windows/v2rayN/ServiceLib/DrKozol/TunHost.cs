@@ -84,7 +84,8 @@ public sealed class TunHost : IAsyncDisposable
         foreach (var entry in resolved) context.AllProxiesMap[entry.Key] = entry.Value;
     }
 
-    public static string Configuration(int port, DesktopPreferences? preferences = null, string? dns = null, bool enableTun = true)
+    public static string Configuration(int port, DesktopPreferences? preferences = null, string? dns = null, bool enableTun = true,
+        IEnumerable<IPAddress>? protocolEndpoints = null)
     {
         if (port is < 1 or > 65535) throw new ArgumentOutOfRangeException(nameof(port));
         // sing-box 1.14 typed DNS and route actions. Native process bypass prevents tunnelling
@@ -104,6 +105,19 @@ public sealed class TunHost : IAsyncDisposable
         """;
         var document = JsonNode.Parse(configuration)!;
         var inbounds = (JsonArray)document["inbounds"]!;
+        if (enableTun && protocolEndpoints is not null)
+        {
+            // Windows process lookup can miss a newly opened native socket. Route exclusions
+            // protect the resolved transport endpoints even when process attribution fails.
+            // Keep this until native process-based bypass is reliable across socket lifetimes.
+            var prefixes = protocolEndpoints.Where(a => !IPAddress.IsLoopback(a) && !a.Equals(IPAddress.Any)
+                && !a.Equals(IPAddress.IPv6Any) && !a.IsIPv6Multicast
+                && (a.AddressFamily != AddressFamily.InterNetwork || a.GetAddressBytes()[0] < 224))
+                .Select(a => a + (a.AddressFamily == AddressFamily.InterNetwork ? "/32" : "/128"))
+                .Distinct(StringComparer.Ordinal).ToArray();
+            if (prefixes.Length > 0)
+                inbounds[0]!["route_exclude_address"] = new JsonArray(prefixes.Select(p => (JsonNode?)JsonValue.Create(p)).ToArray());
+        }
         if (!enableTun) inbounds.Clear();
         if (preferences is { ShareProxy: true })
         {
@@ -144,13 +158,14 @@ public sealed class TunHost : IAsyncDisposable
         return document.ToJsonString();
     }
 
-    public async Task Start(int port, CancellationToken token, DesktopPreferences? preferences = null, string? dns = null, bool enableTun = true)
+    public async Task Start(int port, CancellationToken token, DesktopPreferences? preferences = null, string? dns = null, bool enableTun = true,
+        IEnumerable<IPAddress>? protocolEndpoints = null)
     {
         if (enableTun && !HasTunPermission) throw new UnauthorizedAccessException();
         var executable = Path.Combine(Utils.GetBaseDirectory(), "bin", "sing_box", Utils.GetExeName("sing-box"));
         if (!File.Exists(executable)) throw new FileNotFoundException();
         _configPath = Utils.GetConfigPath("drkozol-tun.json");
-        await File.WriteAllTextAsync(_configPath, Configuration(port, preferences, dns, enableTun), token);
+        await File.WriteAllTextAsync(_configPath, Configuration(port, preferences, dns, enableTun, protocolEndpoints), token);
         _process = new Process { StartInfo = new ProcessStartInfo(executable) { UseShellExecute = false, CreateNoWindow = true,
             WorkingDirectory = Path.GetDirectoryName(executable)!, RedirectStandardError = true, RedirectStandardOutput = true } };
         _process.StartInfo.ArgumentList.Add("run"); _process.StartInfo.ArgumentList.Add("-c"); _process.StartInfo.ArgumentList.Add(_configPath);

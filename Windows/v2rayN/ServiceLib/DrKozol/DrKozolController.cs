@@ -636,8 +636,10 @@ public sealed class DrKozolController
                     AppManager.Instance.GetLocalPort(EInboundProtocol.socks));
                 try { listener.Start(); } finally { listener.Stop(); }
             }, _lifetime.Token);
+            var transportEndpoints = new List<System.Net.IPAddress>();
             if (profile.AmneziaConfig is { } raw)
             {
+                if (UseTun) transportEndpoints.AddRange(await AmneziaHost.EndpointAddresses(raw, _lifetime.Token));
                 _amnezia = new AmneziaHost();
                 long prevUp = 0, prevDown = 0;
                 _amnezia.Stats += (up, down) => { Up = Math.Max(0, up - prevUp); Down = Math.Max(0, down - prevDown); prevUp = up; prevDown = down; SessionBytes = up + down; Changed?.Invoke(); };
@@ -656,6 +658,15 @@ public sealed class DrKozolController
                 if (!context.Success) throw new InvalidDataException();
                 if (UseTun) await TunHost.ResolveContextEndpoints(context.MainResult.Context, _lifetime.Token,
                     (node, token) => TunHost.ResolveEndpoint(node, token, Config.DrKozol.IpPreference));
+                if (UseTun)
+                {
+                    if (context.PreSocksResult is { } pre)
+                        await TunHost.ResolveContextEndpoints(pre.Context, _lifetime.Token,
+                            (node, token) => TunHost.ResolveEndpoint(node, token, Config.DrKozol.IpPreference));
+                    foreach (var node in context.MainResult.Context.AllProxiesMap.Values
+                        .Concat(context.PreSocksResult?.Context.AllProxiesMap.Values.AsEnumerable() ?? []))
+                        if (System.Net.IPAddress.TryParse(node.Address, out var endpoint)) transportEndpoints.Add(endpoint);
+                }
                 await CoreManager.Instance.LoadCore(context.MainResult.Context, context.PreSocksResult?.Context);
             }
             // Process.Start is not a ready signal. Do not route applications to a listener that
@@ -693,7 +704,7 @@ public sealed class DrKozolController
             {
                 _tun = new TunHost();
                 await _tun.Start(AppManager.Instance.GetLocalPort(EInboundProtocol.socks), _lifetime.Token, Config.DrKozol,
-                    string.IsNullOrWhiteSpace(Account?.TunnelDns) ? Config.DrKozol.TunnelDns : Account.TunnelDns, UseTun);
+                    string.IsNullOrWhiteSpace(Account?.TunnelDns) ? Config.DrKozol.TunnelDns : Account.TunnelDns, UseTun, transportEndpoints);
             }
             _nativeReady = true;
             _recoveryFailures = 0;

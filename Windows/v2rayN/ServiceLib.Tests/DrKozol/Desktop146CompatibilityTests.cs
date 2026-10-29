@@ -49,6 +49,31 @@ public class Desktop146CompatibilityTests
     }
 
     [Test]
+    public async Task TransportEndpointRoutesCannotLoopWhenProcessLookupFails()
+    {
+        var endpoints = new[] { "192.0.2.10", "2001:db8::10", "fd00::10", "192.0.2.10", "127.0.0.1", "::1", "0.0.0.0", "::", "224.0.0.1", "ff02::1" }
+            .Select(System.Net.IPAddress.Parse).ToArray();
+        var document = JsonNode.Parse(TunHost.Configuration(10808, protocolEndpoints: endpoints))!;
+        var exclusions = document["inbounds"]![0]!["route_exclude_address"]!.AsArray().Select(n => n!.GetValue<string>()).ToArray();
+        await exclusions.Length.Should().BeEqualTo(3);
+        await exclusions.Contains("192.0.2.10/32").Should().BeTrue();
+        await exclusions.Contains("2001:db8::10/128").Should().BeTrue();
+        await exclusions.Contains("fd00::10/128").Should().BeTrue();
+        await document["inbounds"]![0]!["strict_route"]!.GetValue<bool>().Should().BeTrue();
+        await document["route"]!["rules"]![0]!["action"]!.GetValue<string>().Should().BeEqualTo("hijack-dns");
+        var output = Environment.GetEnvironmentVariable("DRKOZOL_CONFIG_VALIDATION_OUTPUT");
+        if (output is not null) await File.WriteAllTextAsync(Path.Combine(output, "transport-exclusions.json"), document.ToJsonString());
+    }
+
+    [Test]
+    public async Task AmneziaTransportExclusionsSupportBothAddressFamilies()
+    {
+        var addresses = await AmneziaHost.EndpointAddresses("[Interface]\n[Peer]\nEndpoint = 192.0.2.10:51820\n[Peer]\nEndpoint = [2001:db8::10]:51820 # peer", CancellationToken.None);
+        await addresses.Length.Should().BeEqualTo(2);
+        await addresses.Any(a => a.ToString() == "2001:db8::10").Should().BeTrue();
+    }
+
+    [Test]
     public async Task TunnelRoutesBothAddressFamiliesAndHonorsLanAndDns()
     {
         var document = JsonNode.Parse(TunHost.Configuration(10808, new() { RouteLan = true }, "9.9.9.9"))!;

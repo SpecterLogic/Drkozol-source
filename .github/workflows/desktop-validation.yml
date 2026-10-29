@@ -55,7 +55,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
           PRIVATE_BUILD_MARKERS: ${{ secrets.DRKOZOL_PRIVATE_BUILD_MARKERS }}
-          DRAFT_RELEASE_ID: '427329384'
+          DRAFT_RELEASE_ID: '427340717'
         run: python tools/stage_desktop_validation.py windows
 
   linux:
@@ -112,5 +112,5 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
           PRIVATE_BUILD_MARKERS: ${{ secrets.DRKOZOL_PRIVATE_BUILD_MARKERS }}
-          DRAFT_RELEASE_ID: '427329384'
+          DRAFT_RELEASE_ID: '427340717'
         run: python3 tools/stage_desktop_validation.py linux

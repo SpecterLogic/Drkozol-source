@@ -1,0 +1,42 @@
+name: Validate Windows 1.5.1 package
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+env:
+  APP_RELEASE_ID: '428149312'
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: 'dfb75f74669a615128e2ab9a514ba4e26de76751'
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.401'
+      - name: Restore verified native inputs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: pwsh
+        run: |
+          gh release download v1.5.0 -R SpecterLogic/Drkozol --pattern 'DrKozol-1.5.0-windows-x64.zip' --dir artifacts/base
+          if ((Get-FileHash artifacts/base/DrKozol-1.5.0-windows-x64.zip -Algorithm SHA256).Hash -ne '364be6997afd74f3a0ffa758e2d68c223997196ddcecd88f6616e2c16f01d842') { throw 'Native archive mismatch' }
+          Expand-Archive artifacts/base/DrKozol-1.5.0-windows-x64.zip artifacts/base/extracted
+          Copy-Item artifacts/base/extracted/DrKozol artifacts/windows -Recurse
+          $payload=gh api 'repos/SpecterLogic/Drkozol-source/contents/tools/release151_cloud.py?ref=main' --jq '.content'
+          [IO.File]::WriteAllBytes("$PWD/cloud151.py",[Convert]::FromBase64String(($payload -join '')))
+      - run: dotnet publish Windows/v2rayN/v2rayN/v2rayN.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=false -o artifacts/windows
+      - run: dotnet run --project Windows/v2rayN/ServiceLib.Tests/ServiceLib.Tests.csproj -c Release
+      - run: python cloud151.py windows-package
+      - name: Check packaged UI
+        shell: pwsh
+        run: |
+          Expand-Archive artifacts/DrKozol-1.5.1-windows-x64.zip artifacts/check
+          $p=Start-Process artifacts/check/DrKozol/DrKozol.exe -ArgumentList '--smoke-test' -WindowStyle Hidden -PassThru -Wait
+          if ($p.ExitCode -ne 0) { throw 'Packaged UI checks failed' }
+      - name: Stage checked Windows package
+        env:
+          GH_TOKEN: ${{ secrets.DRKOZOL_RELEASE151_TOKEN }}
+        run: python cloud151.py windows-upload

@@ -1,0 +1,62 @@
+name: Stage Android Windows and source 1.5.1
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+env:
+  SOURCE_RELEASE_ID: '428149341'
+  APP_RELEASE_ID: '428149312'
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: '5f17d371b7be0440c55edddda577caf129664a88'
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: 'platforms;android-37.0 build-tools;37.0.0 platform-tools'
+      - name: Restore exact source and native inputs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p artifacts
+          gh release download v1.5.0-desktop -R SpecterLogic/Drkozol-source --pattern 'DrKozol-desktop-source-1.5.0.zip' --output artifacts/base-source.zip
+          gh api 'repos/SpecterLogic/Drkozol-source/contents/tools/release151_cloud.py?ref=main' --jq '.content' | base64 -d > cloud151.py
+          gh api 'repos/SpecterLogic/Drkozol-source/contents/tools/release151_manifest.json?ref=main' --jq '.content' | base64 -d > manifest151.json
+          python3 cloud151.py prepare
+          python3 cloud151.py source
+          cat > mirror.gradle <<'EOF'
+          beforeSettings { s -> s.pluginManagement.repositories { maven { url = uri('https://maven.aliyun.com/repository/google') }; gradlePluginPortal(); mavenCentral(); google() } }
+          settingsEvaluated { s -> s.dependencyResolutionManagement.repositories { clear(); maven { url = uri('https://maven.aliyun.com/repository/google') }; mavenCentral(); google() } }
+          EOF
+      - name: Build and run JVM tests
+        working-directory: V2rayNG
+        run: chmod +x gradlew && ./gradlew -I ../mirror.gradle :app:testPlaystoreDebugUnitTest :app:assemblePlaystoreRelease :app:assemblePlaystoreDebug :app:assemblePlaystoreDebugAndroidTest --max-workers=2 --console=plain
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          disable-animations: true
+          script: cd V2rayNG && ./gradlew -I ../mirror.gradle :app:connectedPlaystoreDebugAndroidTest --max-workers=2 --console=plain
+      - name: Stage unsigned tested APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 cloud151.py unsigned
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: android151-test-results
+          path: |
+            V2rayNG/app/build/test-results
+            V2rayNG/app/build/outputs/androidTest-results

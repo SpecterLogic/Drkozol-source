@@ -1,0 +1,50 @@
+name: Validate Linux 1.5.1 packages
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.401'
+      - run: sudo apt-get update && sudo apt-get install -y xvfb fonts-dejavu-core libgtk-3-0 libcap2-bin dbus-x11 gsettings-desktop-schemas openbox xdotool x11-utils
+      - name: Restore verified unchanged native engines
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download v1.5.0 -R SpecterLogic/Drkozol --pattern 'DrKozol-1.5.0-linux-x64.tar.gz' --dir artifacts/base
+          echo '47cd20c26e109b92a1af1cb6434f345e506d9b1240f703136519a1dd32f9b3d4  artifacts/base/DrKozol-1.5.0-linux-x64.tar.gz' | sha256sum -c
+          tar -xzf artifacts/base/DrKozol-1.5.0-linux-x64.tar.gz -C artifacts/base
+          cp -a artifacts/base/DrKozol artifacts/linux
+      - run: dotnet publish Windows/v2rayN/v2rayN.Desktop/v2rayN.Desktop.csproj -c Release -r linux-x64 --self-contained true -p:PublishSingleFile=false -o artifacts/linux
+      - run: dotnet run --project Windows/v2rayN/ServiceLib.Tests/ServiceLib.Tests.csproj -c Release
+      - run: python3 tools/package_linux.py artifacts/linux --output artifacts/packages
+      - name: Validate Linux UI and lifecycle
+        run: |
+          cp -a artifacts/linux artifacts/linux-test
+          xvfb-run -a -s '-screen 0 1920x1080x24' dbus-run-session -- artifacts/linux-test/DrKozol --smoke-test
+          xvfb-run -a -s '-screen 0 1920x1080x24' dbus-run-session -- python3 tools/check_linux_lifecycle.py artifacts/linux/DrKozol --output artifacts/lifecycle.json
+      - name: Validate Debian installation
+        run: |
+          sudo dpkg -i artifacts/packages/DrKozol-1.5.1-linux-amd64.deb
+          mkdir -p artifacts/installed-user-data artifacts/installed-check
+          XDG_DATA_HOME="$PWD/artifacts/installed-user-data" DRKOZOL_SMOKE_OUTPUT="$PWD/artifacts/installed-check" xvfb-run -a -s '-screen 0 1920x1080x24' dbus-run-session -- /usr/bin/DrKozol --smoke-test
+      - name: Upload checked Linux packages to approved draft
+        env:
+          GH_TOKEN: ${{ secrets.DRKOZOL_RELEASE151_TOKEN }}
+        run: |
+          gh release view v1.5.1 -R SpecterLogic/Drkozol --json isDraft --jq '.isDraft' | grep -x true
+          gh release upload v1.5.1 -R SpecterLogic/Drkozol artifacts/packages/DrKozol-1.5.1-linux-*
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: linux-validation-results
+          path: |
+            artifacts/linux-test/smoke-result.json
+            artifacts/installed-check/smoke-result.json
+            artifacts/lifecycle.json

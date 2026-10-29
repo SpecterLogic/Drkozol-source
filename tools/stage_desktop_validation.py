@@ -12,6 +12,8 @@ def main():
         with urllib.request.urlopen(urllib.request.Request(url,headers=values,data=data),timeout=300) as response:return json.load(response)
     release=request(repo+'/releases/'+os.environ['DRAFT_RELEASE_ID'])
     assert release['draft'] and release['tag_name'].startswith('v1.5.0-validation-')
+    markers=[value.encode().lower() for value in json.loads(os.environ['PRIVATE_BUILD_MARKERS'])]
+    assert markers and all(len(value)>=4 for value in markers)
     if sys.argv[1]=='windows':
         output=io.BytesIO()
         with zipfile.ZipFile(output,'w',zipfile.ZIP_DEFLATED,compresslevel=6) as archive:
@@ -21,7 +23,7 @@ def main():
                 assert not path.is_symlink() and not {'.signing','.git','guiConfigs','guiLogs','guiTemps','guiBackups','binConfigs'}.intersection(relative.parts)
                 assert not path.name.startswith(('smoke-','private-'))
                 data=path.read_bytes()
-                assert b'c:\\users\\' not in data.lower()
+                assert not any(marker in data.lower() for marker in markers), 'Private build metadata in '+relative.as_posix()
                 info=zipfile.ZipInfo('DrKozol/'+relative.as_posix());info.compress_type=zipfile.ZIP_DEFLATED;info.external_attr=0o100644<<16
                 archive.writestr(info,data)
         assets={'DrKozol-1.5.0-windows-x64.zip':output.getvalue()}

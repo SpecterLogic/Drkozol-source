@@ -44,7 +44,7 @@ jobs:
         shell: pwsh
         env:
           DRKOZOL_TEST_URL: ${{ secrets.DRKOZOL_TEST_URL_150_DESKTOP }}
-          DRKOZOL_TEST_TUN: '0'
+          DRKOZOL_TEST_TUN: ${{ inputs.hosted_windows_tun && '1' || '0' }}
           DRKOZOL_SKIP_AWG_TEST: '1'
         run: |
           Copy-Item artifacts/windows artifacts/windows-smoke -Recurse
@@ -54,7 +54,8 @@ jobs:
       - name: Stage only the checked clean Windows package
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          DRAFT_RELEASE_ID: '427326126'
+          PRIVATE_BUILD_MARKERS: ${{ secrets.DRKOZOL_PRIVATE_BUILD_MARKERS }}
+          DRAFT_RELEASE_ID: '427329384'
         run: python tools/stage_desktop_validation.py windows
 
   linux:
@@ -110,5 +111,6 @@ jobs:
       - name: Stage only checked clean Linux packages
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          DRAFT_RELEASE_ID: '427326126'
+          PRIVATE_BUILD_MARKERS: ${{ secrets.DRKOZOL_PRIVATE_BUILD_MARKERS }}
+          DRAFT_RELEASE_ID: '427329384'
         run: python3 tools/stage_desktop_validation.py linux

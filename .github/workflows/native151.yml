@@ -1,0 +1,19 @@
+name: Verify complete Android native package
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  native:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RELEASE_ID: '428149341'
+          SOURCE_SNAPSHOT: '6f27a7c1ee0ec90f180a6b74a5d2425fd8b3a45b'
+          TESTED_SOURCE_SNAPSHOT: '5f17d371b7be0440c55edddda577caf129664a88'
+          WG_HASHES: '{"arm64-v8a":"8bd1d044fcf1828924981bb8b1d66571b884c16d2d779de603d5b359d6ed4416","armeabi-v7a":"f0f7e76889b4fd19c5f58eb940ece4424aeb1d754426f421c2e8d38472722045","x86":"14d137cb95139fae1461ff75215f6dbf2203830d03a6c2d09d0830be0e59ab86","x86_64":"05dd7e0df77dda53d070848d8f1b176578629ff0ed0eacbe36f451239637ad7d"}'
+        run: |
+          gh release download v1.5.0 -R SpecterLogic/Drkozol --pattern 'DrKozol-1.5.0.apk' --output base.apk
+          python3 tools/release151_native.py

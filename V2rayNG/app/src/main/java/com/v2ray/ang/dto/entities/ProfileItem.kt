@@ -69,6 +69,8 @@ data class ProfileItem(
     var policyGroupType: String? = null,
     var policyGroupSubscriptionId: String? = null,
     var policyGroupFilter: String? = null,
+    // Null preserves legacy subscription/filter groups; an explicit list never expands implicitly.
+    var policyGroupServerIds: List<String>? = null,
     var policyGroupTestOutbounds: Boolean? = null,
     var policyGroupFallbackTag: String? = null,
     var proxyChainProfiles: String? = null,

@@ -458,7 +458,9 @@ object Utils {
      *
      * @return True if the package is Xray, false otherwise.
      */
-    fun isXray(): Boolean = BuildConfig.APPLICATION_ID.startsWith("com.v2ray.ang")
+    // The bundled AndroidLibXrayLite is Xray in both distributions. Branding/package IDs
+    // must not select a different core protocol (or create an unnecessary HTTP listener).
+    fun isXray(): Boolean = true
 
     /**
      * Check if an IPv4 address is within an IPv4 CIDR range

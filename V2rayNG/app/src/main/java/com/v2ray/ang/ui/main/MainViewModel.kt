@@ -394,7 +394,16 @@ class MainViewModel(
                 updateSummaryDeadline?.cancel()
                 _uiState.update { it.copy(updateSummary = null) }
             }
-            MainAction.ConnectBestServer, MainAction.ConnectBalancer -> Unit // Activity owns permission/start dispatch.
+            MainAction.LoadBalancerCandidates -> viewModelScope.launch(ioDispatcher) {
+                val group = uiState.value.selectedGroupId
+                val candidates = dataSource.getServerGuidList(group).mapNotNull { id ->
+                    dataSource.decodeServerConfig(id)?.takeIf { com.v2ray.ang.handler.balancerEligible(it) }?.let {
+                        SelectedServerSummary(id, it.remarks, serverProtocolDescription(it), configurationFlag(it.remarks), it.subscriptionId)
+                    }
+                }
+                _uiState.update { if (it.selectedGroupId == group) it.copy(balancerCandidates = candidates) else it }
+            }
+            MainAction.ConnectBestServer, MainAction.ConnectBalancer, is MainAction.ConnectSelectedBalancer -> Unit // Activity owns permission/start dispatch.
             is MainAction.SetTheme -> viewModelScope.launch(ioDispatcher) { com.v2ray.ang.ui.compose.ThemeManager.setThemeMode(action.mode) }
             is MainAction.SetPalette -> viewModelScope.launch(ioDispatcher) { com.v2ray.ang.ui.compose.ThemeManager.setPalette(action.settingId) }
             MainAction.Initialize -> initialize()
@@ -1051,6 +1060,12 @@ class MainViewModel(
         }
         if (best == null) { toastError(dataSource.getString(R.string.dr_no_healthy_server)); return false }
         return updateSelectedGuid(best, HomeConnectionChoice.BEST)
+    }
+
+    suspend fun chooseSelectedBalancerForConnection(serverIds: List<String>): Boolean = withContext(ioDispatcher) {
+        val guid = dataSource.createSelectedBalancer(uiState.value.selectedGroupId, serverIds) ?: return@withContext false
+        setupGroupTab(forceRefresh = true).join()
+        updateSelectedGuid(guid, HomeConnectionChoice.SELECTED_BALANCER)
     }
 
     suspend fun chooseBalancerForConnection(): Boolean = withContext(ioDispatcher) {

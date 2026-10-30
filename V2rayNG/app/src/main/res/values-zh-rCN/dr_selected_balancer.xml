@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+<string name="dr_selected_balancer">自选服务器负载均衡</string>
+<string name="dr_selected_balancer_help">请选择至少两个服务器。仅使用所选服务器。</string>
+<string name="dr_palette_kyoto">Kyoto</string>
+<string name="dr_palette_baikal">Baikal</string>
+<string name="dr_palette_jade">Guilin</string>
+<string name="dr_palette_porcelain">Porcelain</string>
+</resources>

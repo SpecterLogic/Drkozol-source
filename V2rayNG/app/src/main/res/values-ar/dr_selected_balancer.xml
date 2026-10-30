@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+<string name="dr_selected_balancer">موازنة الخوادم المختارة</string>
+<string name="dr_selected_balancer_help">اختر خادمين على الأقل. تُستخدم الخوادم المختارة فقط.</string>
+<string name="dr_palette_kyoto">Kyoto</string>
+<string name="dr_palette_baikal">Baikal</string>
+<string name="dr_palette_jade">Guilin</string>
+<string name="dr_palette_porcelain">Porcelain</string>
+</resources>

@@ -13,13 +13,14 @@ sealed interface MainStatus {
     data class ConnectionTest(val result: ConnectionTestResult) : MainStatus
 }
 
-enum class HomeConnectionChoice { MANUAL, BEST, BALANCER }
+enum class HomeConnectionChoice { MANUAL, BEST, BALANCER, SELECTED_BALANCER }
 
 /**
  * Main UI state
  */
 data class MainUiState(
     val groups: List<GroupMapItem> = emptyList(),
+    val balancerCandidates: List<SelectedServerSummary> = emptyList(),
     val selectedGroupId: String = "",
     val selectedGuid: String? = null,
     val isRunning: Boolean = false,
@@ -81,7 +82,8 @@ internal fun MainUiState.withSelectedServerSnapshot(guid: String?, profile: com.
     if (guid != selectedGuid) return this
     val choice = when {
         guid.isNullOrEmpty() || profile == null -> HomeConnectionChoice.MANUAL
-        profile.configType == com.v2ray.ang.enums.EConfigType.POLICYGROUP -> HomeConnectionChoice.BALANCER
+        profile.configType == com.v2ray.ang.enums.EConfigType.POLICYGROUP ->
+            if (profile.policyGroupServerIds == null) HomeConnectionChoice.BALANCER else HomeConnectionChoice.SELECTED_BALANCER
         homeConnectionChoice == HomeConnectionChoice.BEST -> HomeConnectionChoice.BEST
         else -> HomeConnectionChoice.MANUAL
     }
@@ -133,6 +135,8 @@ sealed interface MainAction {
     data object ConnectionStarting : MainAction
     data object ConnectBestServer : MainAction
     data object ConnectBalancer : MainAction
+    data object LoadBalancerCandidates : MainAction
+    data class ConnectSelectedBalancer(val serverIds: List<String>) : MainAction
     data object UseSystemColors : MainAction
     data object DismissUpdateSummary : MainAction
     data class SavePreferences(val preferences: com.v2ray.ang.handler.ClientPreferences) : MainAction

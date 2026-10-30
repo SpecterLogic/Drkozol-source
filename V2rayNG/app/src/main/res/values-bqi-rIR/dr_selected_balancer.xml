@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+<string name="dr_selected_balancer">بالانسر سرورهای پسندکرده</string>
+<string name="dr_selected_balancer_help">کمینه دو سرور پسند کنیڌ. فقط همین سرورها و بالانس شرکت اکنن.</string>
+<string name="dr_palette_kyoto">Kyoto</string>
+<string name="dr_palette_baikal">Baikal</string>
+<string name="dr_palette_jade">Guilin</string>
+<string name="dr_palette_porcelain">Porcelain</string>
+</resources>

@@ -10,6 +10,7 @@ import androidx.compose.foundation.progressSemantics
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -62,14 +63,13 @@ import java.util.Date
 @Composable
 fun DrSpectScreen(mainViewModel: MainViewModel, dispatchAction: (MainAction) -> Unit, dispatchNavigation: (MainDestination) -> Unit) {
     val state by mainViewModel.uiState.collectAsStateWithLifecycle()
-    val view = androidx.compose.ui.platform.LocalView.current
+    val context = androidx.compose.ui.platform.LocalContext.current
     val lastFeedback = remember { longArrayOf(0L) }
     val feedback: () -> Unit = {
         val now = android.os.SystemClock.uptimeMillis()
         if (state.preferences.enabled(com.v2ray.ang.handler.ClientOption.VIBRATION) && now - lastFeedback[0] >= 80L) {
             lastFeedback[0] = now
-            // App actions use touch feedback, not the independently configured keyboard channel.
-            view.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
+            com.v2ray.ang.ui.compose.performAppClickFeedback(context)
         }
     }
     val onAction: (MainAction) -> Unit = { action ->
@@ -98,6 +98,8 @@ fun DrSpectScreen(mainViewModel: MainViewModel, dispatchAction: (MainAction) -> 
     var importing by rememberSaveable { mutableStateOf(false) }
     var input by rememberSaveable { mutableStateOf("") }
     var search by rememberSaveable { mutableStateOf("") }
+    var selectedBalancerDialog by rememberSaveable { mutableStateOf(false) }
+    var selectedBalancerIds by rememberSaveable { mutableStateOf(arrayListOf<String>()) }
     var themeDialog by rememberSaveable { mutableStateOf(false) }
     var languageDialog by rememberSaveable { mutableStateOf(false) }
     var settingsPanel by rememberSaveable { mutableStateOf<String?>(null) }
@@ -129,6 +131,7 @@ fun DrSpectScreen(mainViewModel: MainViewModel, dispatchAction: (MainAction) -> 
             if (dynamicColors) listOf(colors.background, colors.surfaceContainerLowest)
             else listOf(Color(paletteColors.background), Color(paletteColors.backgroundEnd))))
             .themeDecoration(palette, dark, dynamicColors)) {
+        if (!dynamicColors) ThemeArtwork(palette, dark, Modifier.fillMaxSize(), preview = false)
         if (!themeDialog) Scaffold(containerColor = Color.Transparent, contentColor = ink) { padding ->
             Column(Modifier.fillMaxSize()
                 .padding(padding).consumeWindowInsets(padding).imePadding()
@@ -202,6 +205,14 @@ fun DrSpectScreen(mainViewModel: MainViewModel, dispatchAction: (MainAction) -> 
                                     Icon(painterResource(R.drawable.dr_layers), null, Modifier.size(19.dp))
                                     Spacer(Modifier.width(6.dp)); Text(stringResource(R.string.dr_balancer), fontSize = 12.sp)
                                 }
+                            }
+                            HomeConnectionButton(selected = state.homeConnectionChoice == HomeConnectionChoice.SELECTED_BALANCER, onClick = {
+                                onAction(MainAction.LoadBalancerCandidates)
+                                selectedBalancerDialog = true
+                            }, enabled = !state.isTesting && !state.isConnecting) {
+                                Icon(painterResource(R.drawable.dr_layers), null, Modifier.size(19.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text(stringResource(R.string.dr_selected_balancer))
                             }
                             Text(if (state.isConnecting) stringResource(R.string.dr_connecting) else if (state.backgroundTesting) stringResource(R.string.dr_background_test) else if (state.isTesting) mainViewModel.formatStatus(state.status) else stringResource(if (state.accountLocked) R.string.dr_renew else if (state.isRunning) R.string.dr_connected else if (state.selectedGuid.isNullOrEmpty()) R.string.dr_choose_server else R.string.dr_tap_connect),
                                 color = if (state.isRunning || state.isTesting) accent else muted, fontSize = 19.sp)
@@ -381,6 +392,25 @@ fun DrSpectScreen(mainViewModel: MainViewModel, dispatchAction: (MainAction) -> 
             confirmButton = { TextButton(onClick = { resetDialog = false; onAction(MainAction.ResetPreferences) }) { Text(stringResource(R.string.dr_reset_settings)) } },
             dismissButton = { TextButton(onClick = { resetDialog = false }) { Text(stringResource(R.string.dr_cancel)) } })
         com.v2ray.ang.ui.compose.QRCodeDialog(state.shareQRCodeBitmap) { onAction(MainAction.DismissQRCodeDialog) }
+        if (selectedBalancerDialog) AlertDialog(onDismissRequest = { selectedBalancerDialog = false },
+            title = { Text(stringResource(R.string.dr_selected_balancer)) },
+            text = { Column(Modifier.verticalScroll(rememberScrollState())) {
+                Text(stringResource(R.string.dr_selected_balancer_help))
+                state.balancerCandidates.forEach { candidate -> key(candidate.guid) {
+                    val checked = candidate.guid in selectedBalancerIds
+                    Row(Modifier.fillMaxWidth().toggleable(checked, role = Role.Checkbox, onValueChange = {
+                        selectedBalancerIds = ArrayList(if (checked) selectedBalancerIds - candidate.guid else selectedBalancerIds + candidate.guid)
+                    }).heightIn(min = 56.dp).semantics(mergeDescendants = true) {}, verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked, onCheckedChange = null)
+                        Column(Modifier.weight(1f)) { Text(candidate.name); Text(candidate.protocol, style = MaterialTheme.typography.bodySmall) }
+                    }
+                } }
+            } },
+            confirmButton = { TextButton(enabled = selectedBalancerIds.count { id -> state.balancerCandidates.any { it.guid == id } } >= 2, onClick = {
+                selectedBalancerDialog = false
+                onAction(MainAction.ConnectSelectedBalancer(selectedBalancerIds.filter { id -> state.balancerCandidates.any { it.guid == id } }))
+            }) { Text(stringResource(R.string.dr_connect)) } },
+            dismissButton = { TextButton(onClick = { selectedBalancerDialog = false }) { Text(stringResource(R.string.dr_dismiss)) } })
         if (themeDialog) ThemeChoicePage(palette, themeMode, dynamicColors, onAction) { themeDialog = false }
         if (languageDialog) LanguageChoiceDialog(state.preferences.languageCode, onAction) { languageDialog = false }
     }
@@ -613,6 +643,10 @@ internal val LocalButtonFeedback = compositionLocalOf<() -> Unit> { {} }
     DrKozolPalette.AURORA -> R.string.dr_palette_aurora
     DrKozolPalette.SANDSTONE -> R.string.dr_palette_sandstone
     DrKozolPalette.GRAPHITE -> R.string.dr_palette_graphite
+    DrKozolPalette.KYOTO -> R.string.dr_palette_kyoto
+    DrKozolPalette.BAIKAL -> R.string.dr_palette_baikal
+    DrKozolPalette.JADE -> R.string.dr_palette_jade
+    DrKozolPalette.PORCELAIN -> R.string.dr_palette_porcelain
 })
 
 @Composable private fun ProtocolLabel(description: String) {
@@ -654,8 +688,32 @@ internal val LocalButtonFeedback = compositionLocalOf<() -> Unit> { {} }
 }
 
 @Composable private fun ThemeChoicePage(palette: DrKozolPalette, mode: String, dynamic: Boolean, onAction: (MainAction) -> Unit, dismiss: () -> Unit) {
-    var galleryMode by rememberSaveable { mutableStateOf(if (mode == "1") "1" else "2") }
+    val initialDark = LocalDarkTheme.current
+    var galleryMode by rememberSaveable { mutableStateOf(if (initialDark) "2" else "1") }
     androidx.activity.compose.BackHandler(onBack = dismiss)
+    val galleryDark = galleryMode == "2"
+    val activity = androidx.activity.compose.LocalActivity.current
+    val view = androidx.compose.ui.platform.LocalView.current
+    SideEffect {
+        activity?.window?.let { window ->
+            androidx.core.view.WindowCompat.getInsetsController(window, view).apply {
+                isAppearanceLightStatusBars = !galleryDark
+                isAppearanceLightNavigationBars = !galleryDark
+            }
+        }
+    }
+    DisposableEffect(Unit) {
+        onDispose {
+            activity?.window?.let { window ->
+                androidx.core.view.WindowCompat.getInsetsController(window, view).apply {
+                    isAppearanceLightStatusBars = !initialDark
+                    isAppearanceLightNavigationBars = !initialDark
+                }
+            }
+        }
+    }
+    androidx.compose.runtime.CompositionLocalProvider(LocalDarkTheme provides galleryDark) {
+    MaterialTheme(colorScheme = paletteColorScheme(palette, galleryDark)) {
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -695,10 +753,13 @@ internal val LocalButtonFeedback = compositionLocalOf<() -> Unit> { {} }
                                             onAction(MainAction.SetPalette(choice.settingId)); onAction(MainAction.SetTheme(galleryMode))
                                         }).insetSelection(selected, shape, MaterialTheme.colorScheme.surfaceContainer, MaterialTheme.colorScheme.primary)
                                             .padding(12.dp).semantics(mergeDescendants = true) {}) {
-                                            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Color(preview.background)).padding(14.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                            Box(Modifier.fillMaxWidth().height(108.dp).clip(RoundedCornerShape(14.dp)).background(Color(preview.background))) {
+                                            ThemeArtwork(choice, galleryMode == "2", Modifier.fillMaxSize(), preview = true)
+                                            Row(Modifier.align(Alignment.BottomStart).padding(14.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                                 listOf(preview.accent, preview.surface, preview.muted).forEach { color ->
                                                     Box(Modifier.size(22.dp).clip(CircleShape).background(Color(color)))
                                                 }
+                                            }
                                             }
                                             Row(Modifier.fillMaxWidth().heightIn(min = 52.dp), verticalAlignment = Alignment.CenterVertically) {
                                                 RadioButton(selected, onClick = null)
@@ -714,6 +775,8 @@ internal val LocalButtonFeedback = compositionLocalOf<() -> Unit> { {} }
                 }
             }
         }
+    }
+    }
     }
 }
 

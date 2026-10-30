@@ -145,7 +145,7 @@ object CoreConfigContextBuilder {
 
     private fun resolvePolicyGroupProfiles(config: ProfileItem): List<ProfileItem> {
         try {
-            val serverList = MmkvManager.decodeAllServerList()
+            val serverList = selectedBalancerIds(config.policyGroupServerIds, MmkvManager.decodeAllServerList())
             val orderedServers = if (BalancerStrategyType.from(config.policyGroupType) == BalancerStrategyType.ROUND_ROBIN) {
                 val delays = serverList.associateWith { MmkvManager.decodeServerAffiliationInfo(it)?.realDelayMillis }
                 serverList.sortedBy { com.v2ray.ang.handler.balancerFallbackRank(delays[it]) }

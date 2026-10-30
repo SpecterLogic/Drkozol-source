@@ -153,14 +153,15 @@ class MainActivity : HelperBaseComponentActivity() {
                             mainViewModel.onAction(action)
                         }
                     }
-                    MainAction.ConnectBestServer, MainAction.ConnectBalancer -> {
+                    MainAction.ConnectBestServer, MainAction.ConnectBalancer, is MainAction.ConnectSelectedBalancer -> {
                         if (handoverJob?.isActive != true) handoverJob = lifecycleScope.launch {
                         val previous = withContext(Dispatchers.IO) { mainViewModel.uiState.value.selectedGuid?.let { MmkvManager.decodeServerConfig(it) } }
                         val chosen = if (action == MainAction.ConnectBestServer) mainViewModel.chooseBestForConnection()
+                            else if (action is MainAction.ConnectSelectedBalancer) mainViewModel.chooseSelectedBalancerForConnection(action.serverIds)
                             else mainViewModel.chooseBalancerForConnection()
                         if (chosen) {
                             restartSelectedOrStart(previous)
-                        } else if (action == MainAction.ConnectBalancer) toastError(R.string.dr_balancer_unavailable)
+                        } else if (action != MainAction.ConnectBestServer) toastError(R.string.dr_balancer_unavailable)
                         }
                     }
                     MainAction.TestCurrentServer -> handleLayoutTestClick()

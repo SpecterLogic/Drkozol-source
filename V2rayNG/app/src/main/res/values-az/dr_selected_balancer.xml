@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+<string name="dr_selected_balancer">Seçilmiş server balanslaşdırıcısı</string>
+<string name="dr_selected_balancer_help">Ən azı iki server seçin. Yalnız seçilmiş serverlər istifadə olunur.</string>
+<string name="dr_palette_kyoto">Kyoto</string>
+<string name="dr_palette_baikal">Baikal</string>
+<string name="dr_palette_jade">Guilin</string>
+<string name="dr_palette_porcelain">Porcelain</string>
+</resources>

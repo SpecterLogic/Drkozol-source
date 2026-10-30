@@ -268,6 +268,29 @@ class MainRepository(
         return guid
     }
 
+    override fun createSelectedBalancer(groupId: String, serverIds: List<String>): String? {
+        val available = getServerGuidList(groupId).toSet()
+        val ids = serverIds.distinct()
+        if (ids.size < 2 || ids.any { it !in available || decodeServerConfig(it)?.let { profile -> com.v2ray.ang.handler.balancerEligible(profile) } != true }) return null
+        val existing = java.util.UUID.nameUUIDFromBytes(("DrKozol-selected-balancer:" + groupId).toByteArray(Charsets.UTF_8)).toString()
+        val previous = MmkvManager.decodeServerConfig(existing)
+        val profile = ProfileItem.create(com.v2ray.ang.enums.EConfigType.POLICYGROUP).apply {
+            remarks = localizedContext.getString(R.string.dr_selected_balancer)
+            subscriptionId = groupId
+            policyGroupServerIds = ids
+            policyGroupType = com.v2ray.ang.enums.BalancerStrategyType.ROUND_ROBIN.policyGroupTypeValue
+            policyGroupTestOutbounds = true
+        }
+        return try {
+            MmkvManager.encodeServerConfig(existing, profile)
+        } catch (error: Exception) {
+            // Restore the owned profile/index when publication fails; no separate settings record.
+            if (previous == null) MmkvManager.removeServer(existing) else MmkvManager.encodeServerConfig(existing, previous)
+            com.v2ray.ang.util.LogUtil.e(AppConfig.TAG, "Selected balancer: save failed for group=$groupId", error)
+            null
+        }
+    }
+
     override fun backgroundProbeRevision(): String = MmkvManager.decodeSettingsString("dr_probe_revision").orEmpty()
     override fun backgroundProbeActive(): Boolean = SettingsManager.backgroundProbeActive(app)
     override fun queuePostUpdateProbe(groupId: String) {

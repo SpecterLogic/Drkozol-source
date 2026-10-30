@@ -29,7 +29,9 @@ internal fun Modifier.insetSelection(active: Boolean, shape: Shape, surface: Col
         onDrawWithContent {
             drawOutline(outline, fill)
             drawContent()
-            drawOutline(outline, shadow, style = Stroke(12.dp.toPx()))
-            drawOutline(outline, shine, style = Stroke(2.dp.toPx()))
+            for (width in 6 downTo 1) {
+                drawOutline(outline, shadow, alpha = .055f, style = Stroke(width.dp.toPx()))
+            }
+            drawOutline(outline, shine, alpha = .16f, style = Stroke(.75.dp.toPx()))
         }
     }

@@ -17,6 +17,16 @@ class HomeConnectionChoiceTest {
     }
 
     @Test
+    fun selectedMembershipRestoresItsOwnHighlightEvenWhenMembersHaveDisappeared() {
+        val state = MainUiState(selectedGuid = "selected")
+        val profile = ProfileItem(configType = EConfigType.POLICYGROUP).apply { policyGroupServerIds = listOf("a", "b") }
+        assertEquals(HomeConnectionChoice.SELECTED_BALANCER, state.withSelectedServerSnapshot("selected", profile).homeConnectionChoice)
+        profile.policyGroupServerIds = emptyList()
+        assertEquals(HomeConnectionChoice.SELECTED_BALANCER, state.withSelectedServerSnapshot("selected", profile).homeConnectionChoice)
+        assertEquals(HomeConnectionChoice.MANUAL, state.withSelectedServerSnapshot("selected", null).homeConnectionChoice)
+    }
+
+    @Test
     fun missingAndOrdinaryProfilesClearABalancerHighlightWhileBestIsRetained() {
         val state = MainUiState(selectedGuid = "selected", homeConnectionChoice = HomeConnectionChoice.BALANCER)
         val ordinary = ProfileItem(configType = EConfigType.VLESS)

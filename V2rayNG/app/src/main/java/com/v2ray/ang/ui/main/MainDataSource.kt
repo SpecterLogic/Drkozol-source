@@ -64,6 +64,7 @@ interface MainDataSource : Closeable {
     fun testCurrentServerRealPing(requestId: String)
 
     fun createBalancer(groupId: String): String? = null
+    fun createSelectedBalancer(groupId: String, serverIds: List<String>): String? = null
     fun memoryBytes(): Long = 0
     fun backgroundProbeRevision(): String = ""
     fun backgroundProbeActive(): Boolean = false

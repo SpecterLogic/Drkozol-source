@@ -3,9 +3,17 @@ package com.v2ray.ang.ui.compose
 /** Stable setting IDs preserve explicit choices; fresh installations use ocean. */
 enum class DrKozolPalette(val settingId: String) {
     FOREST("forest"), MAROON("maroon"), PURPLE("purple"), OCEAN("ocean"), SUNSET("sunset"),
-    OLED("oled"), JAPAN("japan"), ANIME("anime"), AURORA("aurora"), SANDSTONE("sandstone"), GRAPHITE("graphite");
+    OLED("oled"), JAPAN("japan"), ANIME("anime"), AURORA("aurora"), SANDSTONE("sandstone"), GRAPHITE("graphite"), KYOTO("kyoto"), BAIKAL("baikal"), JADE("jade"), PORCELAIN("porcelain");
 
     fun colors(dark: Boolean): DrKozolColors = when (this) {
+        KYOTO -> if (dark) DrKozolColors(0xFF11131E, 0xFF070911, 0xFF211C28, 0xFFFFB3BB, 0xFF3C0818, 0xFFFFF0F3, 0xFFCAB5C0)
+            else DrKozolColors(0xFFFFF6F0, 0xFFFFFCF8, 0xFFFFFFFF, 0xFF8D3852, 0xFFFFFFFF, 0xFF30202A, 0xFF755261)
+        BAIKAL -> if (dark) DrKozolColors(0xFF081624, 0xFF030B14, 0xFF132A3A, 0xFF9ADAF7, 0xFF002E44, 0xFFECF8FF, 0xFFA7BDCD)
+            else DrKozolColors(0xFFF0F7FD, 0xFFFBFDFF, 0xFFFFFFFF, 0xFF275E88, 0xFFFFFFFF, 0xFF152B3B, 0xFF506879)
+        JADE -> if (dark) DrKozolColors(0xFF0B1C1A, 0xFF040E0D, 0xFF172F2B, 0xFFA7DEC9, 0xFF06382B, 0xFFEBFCF3, 0xFFB0C7BC)
+            else DrKozolColors(0xFFF3F7EF, 0xFFFCFDF8, 0xFFFFFFFF, 0xFF29684D, 0xFFFFFFFF, 0xFF18352B, 0xFF526D60)
+        PORCELAIN -> if (dark) DrKozolColors(0xFF111A2D, 0xFF070D1A, 0xFF202D43, 0xFFB9CEFF, 0xFF172F56, 0xFFF4F6FF, 0xFFB8C2D5)
+            else DrKozolColors(0xFFF9F6EE, 0xFFFFFDF8, 0xFFFFFFFF, 0xFF34538B, 0xFFFFFFFF, 0xFF212D43, 0xFF5B677C)
         AURORA -> if (dark) DrKozolColors(0xFF071C1B, 0xFF030E12, 0xFF102D2B, 0xFF88E5C8, 0xFF00382B, 0xFFE5FCF4, 0xFFA0C5B9)
             else DrKozolColors(0xFFF0FAF5, 0xFFF8FCFF, 0xFFFFFFFF, 0xFF00664D, 0xFFFFFFFF, 0xFF10352C, 0xFF486D60)
         SANDSTONE -> if (dark) DrKozolColors(0xFF211B14, 0xFF120F0B, 0xFF30291E, 0xFFE8C585, 0xFF3D2B05, 0xFFFCF2DC, 0xFFC3B49B)

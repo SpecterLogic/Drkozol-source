@@ -2,10 +2,27 @@ import tempfile
 from pathlib import Path
 import unittest
 import zipfile
-from check_public_android import find_markers
+from check_public_android import find_markers, validate_routing_assets
+import hashlib
 
 
 class PublicIdentityScanTest(unittest.TestCase):
+    def test_routing_asset_presence_integrity_and_duplicate_rejection(self):
+        payload = b'fixture geodata'
+        expected = {'geosite.dat': hashlib.sha256(payload).hexdigest()}
+        with tempfile.TemporaryDirectory() as folder:
+            apk = Path(folder) / 'fixture.apk'
+            for entries in ([], [('assets/geosite.dat', b'')], [('assets/geosite.dat', b'corrupt')],
+                            [('assets/geosite.dat', payload), ('assets/geosite.dat', payload)]):
+                with zipfile.ZipFile(apk, 'w') as z:
+                    for name, data in entries:
+                        z.writestr(name, data)
+                with self.assertRaises(ValueError):
+                    validate_routing_assets(apk, expected)
+            with zipfile.ZipFile(apk, 'w') as z:
+                z.writestr('assets/geosite.dat', payload)
+            validate_routing_assets(apk, expected)
+
     def test_decoded_dex_resource_and_native_entries_are_all_scanned(self):
         with tempfile.TemporaryDirectory() as folder:
             apk = Path(folder) / 'fixture.apk'

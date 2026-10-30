@@ -1,9 +1,37 @@
+import java.security.MessageDigest
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     id("com.jaredsburrows.license")
 }
+
+// These files are required by the default Xray routing rules even on a fresh install.
+// Verify source inputs before merging assets, rather than producing an unusable APK.
+val verifyBundledRoutingAssets by tasks.registering {
+    val manifest = layout.projectDirectory.file("routing-assets.sha256")
+    val assetDirectory = layout.projectDirectory.dir("src/main/assets")
+    val required = listOf("geosite.dat", "geoip.dat", "geoip-only-cn-private.dat")
+    inputs.file(manifest)
+    inputs.files(required.map { assetDirectory.file(it) })
+    doLast {
+        val hashes = manifest.asFile.readLines().filter { it.isNotBlank() }.associate {
+            val parts = it.trim().split(Regex("\\s+"), limit = 2)
+            check(parts.size == 2) { "Invalid routing asset checksum manifest" }
+            parts[1] to parts[0]
+        }
+        check(hashes.keys == required.toSet()) { "Incomplete routing asset checksum manifest" }
+        required.forEach { name ->
+            val file = assetDirectory.file(name).asFile
+            check(file.isFile && file.length() > 0) { "Required routing asset missing: $name" }
+            val digest = MessageDigest.getInstance("SHA-256").digest(file.readBytes())
+                .joinToString("") { "%02x".format(it) }
+            check(digest == hashes[name]) { "Routing asset checksum mismatch: $name" }
+        }
+    }
+}
+tasks.named("preBuild").configure { dependsOn(verifyBundledRoutingAssets) }
 
 android {
     namespace = "com.v2ray.ang"
@@ -15,7 +43,7 @@ android {
         applicationId = "com.drkozol.client"
         minSdk = 24
         targetSdk = 37
-        versionCode = 17
+        versionCode = 18
         versionName = "1.5.1"
 
         val abiFilterList = (properties["ABI_FILTERS"] as? String)?.split(';')

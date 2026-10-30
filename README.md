@@ -10,7 +10,7 @@ artwork without restricting rights granted by those software licenses.
 
 ## Build from the source release archive
 
-Download DrKozol-source-1.5.1.zip from the v1.5.1 source release. The archive includes
+For the corrected Android 1.5.1 build (versionCode 4000018), download DrKozol-source-1.5.1-android-r2.zip from the v1.5.1-android-r2 source release. Windows and Linux installers remain unchanged. The archive includes
 the native build inputs and routing data used in this release. Signing keys,
 subscriptions and local settings are excluded.
 

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="dr_link_confirm">Təsdiqlə</string>
+    <string name="dr_link_connect">Seçilmiş serverə qoşulsun?</string>
+    <string name="dr_link_disconnect">Cari bağlantı kəsilsin?</string>
+    <string name="dr_link_toggle">Bağlantı vəziyyəti dəyişsin?</string>
+    <string name="dr_link_status">Bağlantı vəziyyəti açılsın?</string>
+    <string name="dr_link_subscription">Abunəlik</string>
+    <string name="dr_routing_refresh">Marşrutları yenilə</string>
+    <string name="dr_routing_failed">Yükləmə alınmadı; əvvəlki qaydalar saxlanıldı</string>
+    <string name="dr_routing_downloading">Yüklənir</string>
+    <string name="dr_routing_auto">Hər 24 saatda avtomatik yeniləmə</string>
+</resources>

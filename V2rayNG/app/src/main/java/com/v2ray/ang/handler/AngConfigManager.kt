@@ -184,6 +184,17 @@ object AngConfigManager {
      */
     fun importBatchConfig(server: String?, subid: String, append: Boolean): Pair<Int, Int> {
         return try {
+            if (server != null && SubscriptionLinkCodec.isLink(server)) {
+                val decoded = SubscriptionLinkCodec.decode(server) ?: return 0 to 0
+                val existing = MmkvManager.decodeSubscriptions().firstOrNull { it.subscription.url == decoded.url }
+                val provider = existing?.subscription ?: SubscriptionItem(url = decoded.url,
+                    remarks = decoded.name ?: java.net.URI(decoded.url).host, customUpdateInterval = false)
+                provider.obfuscatedShare = true
+                if (decoded.name != null) { provider.remarks = decoded.name; provider.customRemarks = true }
+                MmkvManager.encodeSubscription(existing?.guid.orEmpty(), provider)
+                updateConfigViaSubAll()
+                return 0 to 1
+            }
             if (server != null && HappRoutingParser.isLink(server)) {
                 return if (HappRoutingStore.install(com.v2ray.ang.AngApplication.application, subid, server)) 1 to 0 else 0 to 0
             }
@@ -500,7 +511,7 @@ object AngConfigManager {
             val requestHeaders = SettingsManager.subscriptionRequestHeaders(it.subscription.requestHeaders)
             var importedRoutingLink: String? = null
             val captureHeaders: (okhttp3.Headers) -> Unit = { headers ->
-                importedRoutingLink = headers["routing"]?.takeIf(HappRoutingParser::isLink)
+                importedRoutingLink = (headers["autorouting"] ?: headers["routing"])?.takeIf(HappRoutingParser::isLink)
                 com.v2ray.ang.dto.entities.SubscriptionMetadata.text(headers["announce"] ?: headers["profile-announce"])?.let { message ->
                     it.subscription.announcement = message
                     MmkvManager.encodeSubscription(it.guid, it.subscription)

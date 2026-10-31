@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <meta name="description" content="ابزار محلی ساخت پروفایل مسیریابی، لینک آپدیت خودکار و لینک پوشیده برای DrKozol.">
+  <title>DrKozol — سازندهٔ مسیریابی</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header><a href="https://github.com/SpecterLogic/Drkozol" dir="ltr" class="brand">◈ DrKozol</a><span>ابزارهای اتصال</span></header>
+<main>
+  <p class="eyebrow">کنترل مسیر، دست خودتان</p>
+  <h1>قواعدتان را بسازید.<br><span>با یک لینک وارد کنید.</span></h1>
+  <p class="intro">پردازش داخل همین مرورگر انجام می‌شود. اطلاعات فرم ارسال یا ذخیره نمی‌شوند.</p>
+  <section class="card">
+    <h2>پروفایل مسیریابی <small>Routing</small></h2>
+    <form id="routing-form">
+      <div class="grid"><label>نام پروفایل<input name="name" value="My routing" maxlength="128" required></label><label>روش بررسی دامنه<select name="strategy"><option>IPIfNonMatch</option><option>AsIs</option><option>IPOnDemand</option></select></label></div>
+      <div class="grid rules"><label>عبور مستقیم<textarea name="direct" placeholder="example.com&#10;geosite:private"></textarea></label><label>عبور از پروکسی<textarea name="proxy" placeholder="example.org"></textarea></label><label>مسدودسازی<textarea name="block" placeholder="ads.example.org"></textarea></label></div>
+      <details><summary>DNS، آدرس‌های IP و فایل‌های Geo</summary>
+        <div class="grid"><label>DNS تونل، نشانی DoH<input name="remoteDns" type="url" value="https://cloudflare-dns.com/dns-query"></label><label>DNS مستقیم، نشانی DoH<input name="domesticDns" type="url" value="https://dns.google/dns-query"></label></div>
+        <div class="grid rules"><label>IP مستقیم<textarea name="directIp" placeholder="192.0.2.0/24"></textarea></label><label>IP پروکسی<textarea name="proxyIp" placeholder="198.51.100.0/24"></textarea></label><label>IP مسدود<textarea name="blockIp" placeholder="203.0.113.0/24"></textarea></label></div>
+        <div class="grid"><label>GeoIP URL<input name="geoip" type="url" placeholder="https://…"></label><label>GeoSite URL<input name="geosite" type="url" placeholder="https://…"></label></div>
+        <label class="check"><input name="globalProxy" type="checkbox" checked>ترافیک بدون قاعده از پروکسی عبور کند</label>
+        <label class="check"><input name="fakeDns" type="checkbox">FakeDNS</label>
+      </details>
+      <button type="submit">ساخت پروفایل و لینک ورود</button>
+    </form>
+  </section>
+  <section class="card"><h2>آپدیت مستقل قواعد <small>Autorouting</small></h2>
+    <p>فایل JSON پروفایل را روی یک نشانی عمومی HTTPS قرار دهید. برنامه آن را جدا از اشتراک به‌روز می‌کند.</p>
+    <form id="auto-form"><label>نشانی فایل پروفایل<input name="source" type="url" placeholder="https://…/routing.json" required></label><button type="submit">ساخت لینک آپدیت خودکار</button></form>
+  </section>
+  <section class="card"><h2>اشتراک‌گذاری پوشیده <small>crypt1</small></h2>
+    <p>برای نمایش‌ندادن ساب لینک به‌صورت متن ساده. این قالب جایگزین نگهداری امن رمزها نیست.</p>
+    <form id="crypt-form"><div class="grid"><label>ساب لینک<input name="subscription" type="password" autocomplete="off" placeholder="https://…" required></label><label>نام ارائه‌دهنده، اختیاری<input name="provider" maxlength="128"></label></div><button type="submit">ساخت لینک پوشیده</button></form>
+  </section>
+  <section class="card output" aria-labelledby="output-title"><h2 id="output-title">خروجی</h2>
+    <p id="feedback" role="status" aria-live="polite">یک فرم را تکمیل کنید.</p>
+    <label>لینک ورود<textarea id="link-output" readonly dir="ltr" spellcheck="false"></textarea></label>
+    <div class="actions"><button id="copy" disabled>کپی لینک</button><button id="download" disabled>دانلود JSON</button><a id="open-app" aria-disabled="true">بازکردن DrKozol</a></div>
+    <details id="json-details" hidden><summary>نمایش JSON</summary><pre id="json-output" dir="ltr"></pre></details>
+  </section>
+</main>
+<footer>Copyright © 2026 Drkozol · <a href="https://github.com/SpecterLogic/Drkozol/issues">بازخورد</a><p>برای استفاده از قابلیت‌های جدید، نسخهٔ سازگار DrKozol را نصب کنید.</p></footer>
+<script type="module" src="app.mjs"></script>
+</body></html>

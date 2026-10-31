@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="dr_link_confirm">Подтверждение</string>
+    <string name="dr_link_connect">Подключиться к выбранному серверу?</string>
+    <string name="dr_link_disconnect">Отключить соединение?</string>
+    <string name="dr_link_toggle">Изменить состояние подключения?</string>
+    <string name="dr_link_status">Открыть состояние подключения?</string>
+    <string name="dr_link_subscription">Подписка</string>
+    <string name="dr_routing_refresh">Обновить маршрутизацию</string>
+    <string name="dr_routing_failed">Ошибка загрузки; прежние правила сохранены</string>
+    <string name="dr_routing_downloading">Загрузка</string>
+    <string name="dr_routing_auto">Автообновление каждые 24 часа</string>
+</resources>

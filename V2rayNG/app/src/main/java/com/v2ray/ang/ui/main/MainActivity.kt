@@ -99,6 +99,7 @@ class MainActivity : HelperBaseComponentActivity() {
         super.onCreate(savedInstanceState)
         mainViewModel.onAction(MainAction.Initialize)
 
+        handleConfirmedLink(intent)
         checkAndRequestPermission(PermissionType.POST_NOTIFICATIONS) {}
         if (savedInstanceState == null) lifecycleScope.launch {
             if (!mainViewModel.awaitInitialPage()) return@launch
@@ -112,6 +113,7 @@ class MainActivity : HelperBaseComponentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        handleConfirmedLink(intent)
         // Shared-link imports finish in another activity before returning to this singleTask.
         mainViewModel.onAction(MainAction.RefreshGroups)
         mainViewModel.refreshSelectedGuid()
@@ -130,7 +132,7 @@ class MainActivity : HelperBaseComponentActivity() {
                     MainAction.AppFeedback -> openPage(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(AppConfig.APP_ISSUES_URL)))
                     is MainAction.ShareProvider, is MainAction.CopyProvider -> lifecycleScope.launch {
                         val id = if (action is MainAction.ShareProvider) action.id else (action as MainAction.CopyProvider).id
-                        val url = withContext(Dispatchers.IO) { MmkvManager.decodeSubscription(id)?.url }.orEmpty()
+                        val url = withContext(Dispatchers.IO) { MmkvManager.decodeSubscription(id)?.let(com.v2ray.ang.handler.SubscriptionLinkCodec::share) }.orEmpty()
                         if (url.isNotBlank()) {
                             if (action is MainAction.CopyProvider) Utils.setClipboard(this@MainActivity, url)
                             else startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, url), getString(R.string.dr_share)))
@@ -231,6 +233,25 @@ class MainActivity : HelperBaseComponentActivity() {
             LauncherManager.stopService(this)
         } else {
             requestServiceStart()
+        }
+    }
+
+    private fun handleConfirmedLink(incoming: Intent) {
+        val command = com.v2ray.ang.handler.ConfirmedLinkCommands.consume(incoming.getStringExtra("dr_confirmed_link")) ?: return
+        incoming.removeExtra("dr_confirmed_link")
+        if(command=="status") return
+        lifecycleScope.launch {
+            if(!mainViewModel.awaitInitialPage() || mainViewModel.uiState.value.isConnecting) return@launch
+            val running=kotlinx.coroutines.suspendCancellableCoroutine<Boolean> { continuation ->
+                com.v2ray.ang.helper.MessageHelper.sendMsg2ServiceForResult(this@MainActivity,AppConfig.MSG_QUERY_RUNNING,"") {
+                    if(continuation.isActive) continuation.resumeWith(Result.success(it))
+                }
+            }
+            when(command) {
+                "connect" -> if(!running) requestServiceStart()
+                "disconnect" -> if(running) LauncherManager.stopService(this@MainActivity)
+                "toggle" -> if(running) LauncherManager.stopService(this@MainActivity) else requestServiceStart()
+            }
         }
     }
 

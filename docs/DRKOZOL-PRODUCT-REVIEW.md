@@ -1,4 +1,4 @@
-# Client capability review — 2026-10-30
+# Client capability review — 2026-10-31
 
 Scope: Android DrKozol source audit and official public competitor documentation. A documented feature does not prove equivalent behavior on every platform. This is a product planning document, not release copy.
 
@@ -11,12 +11,12 @@ DrKozol already includes protocol-link and QR import, multiple providers, usage/
 | Area | Evidence from other clients | DrKozol status / next step |
 | --- | --- | --- |
 | Provider integration documentation | INCY publishes deep-link, metadata and routing contracts | Add a clear DrKozol integration guide and an import-button contract; no impersonation |
-| Explicit balancer membership | Existing DrKozol shortcut balances the whole provider | Add a separate stable-ID member selection; never broaden an empty or stale selection to all servers |
-| Auto-updating routing profiles | INCY documents a distinct autorouting URL lifecycle | DrKozol's inline/profile import is not equivalent; implement versioned refresh with validation and rollback before claiming support |
-| Obfuscated provider links | INCY documents crypt1 and explicitly calls it obfuscation | No crypt1 compatibility claim; prioritize an open, versioned import format and honest privacy guarantees over a hardcoded shared key |
+| Explicit balancer membership | Explicit member sets keep unrelated peers out of a group | Available since 1.5.2. The 1.5.3 candidate adds a separate health-selected route for authentication/media domains; ordinary traffic retains round robin. This reduces per-request exit changes, but does not guarantee a fixed IP or acceptance by a service |
+| Auto-updating routing profiles | INCY documents a distinct autorouting URL lifecycle | Implemented in the 1.5.3 candidate: HTTPS JSON sources, independent 24-hour refresh, bounded retries, native validation and preservation of previous valid rules on failure. No source revision ordering or user-selectable refresh interval is claimed |
+| Obfuscated provider links | INCY documents crypt1 and explicitly calls it obfuscation | The 1.5.3 candidate implements the public crypt1 wire format with an official deterministic test vector. Shared public key material is not a secrecy boundary; this conceals plain text in sharing, not access from a capable recipient |
 | Apple platforms | Happ publishes iOS/macOS installers | DrKozol has no signed Apple distribution; requires Apple build/signing infrastructure |
 | Routing isolation | Happ documents separate provider control panels | Already implemented; add more provider-update and migration coverage rather than duplicate UI |
-| Theming and accessibility | User-supplied screenshots show dark/light gallery mismatch and harsh selection edges | Fix gallery-wide mode, add illustrated pairs, preserve contrast and large-font layout |
+| Theming and accessibility | User-supplied screenshots show dark/light gallery mismatch and harsh selection edges | 1.5.2 contains illustrated pairs and gallery mode changes. The 1.5.3 candidate anchors artwork to the physical right edge and adds an explicit selected-server border/checkmark |
 
 ## Differentiation worth building next
 

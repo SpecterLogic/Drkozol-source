@@ -71,6 +71,14 @@ class ConnectionToolsActivity : BaseComponentActivity() {
                     Text(stringResource(R.string.dr_routing_reconnect), style = MaterialTheme.typography.bodySmall)
                     state.routing.forEach { group -> key(group.id) {
                         Text(group.title, style = MaterialTheme.typography.titleSmall)
+                        TextButton(enabled=!state.loading, onClick={ action(ToolsAction.RefreshRouting(group.id)) }) {
+                            Text(stringResource(R.string.dr_routing_refresh))
+                        }
+                        group.attempts.forEach { (name, status) ->
+                            Text((name.ifBlank { stringResource(R.string.dr_routing_profiles) }) + " · " +
+                                stringResource(if(status=="failed") R.string.dr_routing_failed else R.string.dr_routing_downloading),
+                                color=if(status=="failed") MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary)
+                        }
                         (listOf(null) + group.names).forEach { name ->
                             val label = name ?: stringResource(R.string.dr_routing_off)
                             Row(Modifier.fillMaxWidth().selectable(selected = name == group.active, role = Role.RadioButton,
@@ -78,7 +86,10 @@ class ConnectionToolsActivity : BaseComponentActivity() {
                                 onClick = { action(ToolsAction.ActivateRouting(group.id, name)) }).padding(vertical = 8.dp),
                                 verticalAlignment = Alignment.CenterVertically) {
                                 RadioButton(selected = name == group.active, onClick = null)
-                                Text(label, Modifier.weight(1f))
+                                Column(Modifier.weight(1f)) {
+                                    Text(label)
+                                    if(name in group.automatic) Text(stringResource(R.string.dr_routing_auto),style=MaterialTheme.typography.bodySmall)
+                                }
                             }
                         }
                     } }

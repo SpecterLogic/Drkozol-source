@@ -230,6 +230,21 @@
                 <data android:scheme="happ" android:host="routing" />
             </intent-filter>
             <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="drkozol" />
+                <data android:host="crypt1" />
+                <data android:host="connect" />
+                <data android:host="open" />
+                <data android:host="disconnect" />
+                <data android:host="close" />
+                <data android:host="toggle" />
+                <data android:host="status" />
+                <data android:host="routing" />
+                <data android:host="autorouting" />
+            </intent-filter>
+            <intent-filter>
                 <action android:name="android.intent.action.SEND" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="text/plain" />

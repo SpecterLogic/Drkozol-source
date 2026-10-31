@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="dr_link_confirm">নিশ্চিত করুন</string>
+    <string name="dr_link_connect">নির্বাচিত সার্ভারে যুক্ত হবেন?</string>
+    <string name="dr_link_disconnect">বর্তমান সংযোগ বিচ্ছিন্ন করবেন?</string>
+    <string name="dr_link_toggle">সংযোগের অবস্থা বদলাবেন?</string>
+    <string name="dr_link_status">সংযোগের অবস্থা খুলবেন?</string>
+    <string name="dr_link_subscription">সাবস্ক্রিপশন</string>
+    <string name="dr_routing_refresh">রাউটিং আপডেট</string>
+    <string name="dr_routing_failed">ডাউনলোড ব্যর্থ; পুরোনো নিয়ম রাখা হয়েছে</string>
+    <string name="dr_routing_downloading">ডাউনলোড হচ্ছে</string>
+    <string name="dr_routing_auto">প্রতি ২৪ ঘণ্টায় স্বয়ংক্রিয় আপডেট</string>
+</resources>

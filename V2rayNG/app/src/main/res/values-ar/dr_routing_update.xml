@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="dr_link_confirm">تأكيد العملية</string>
+    <string name="dr_link_connect">الاتصال بالخادم المختار؟</string>
+    <string name="dr_link_disconnect">قطع الاتصال الحالي؟</string>
+    <string name="dr_link_toggle">تغيير حالة الاتصال؟</string>
+    <string name="dr_link_status">فتح حالة الاتصال؟</string>
+    <string name="dr_link_subscription">اشتراك</string>
+    <string name="dr_routing_refresh">تحديث التوجيه</string>
+    <string name="dr_routing_failed">فشل التنزيل؛ تم الاحتفاظ بالقواعد السابقة</string>
+    <string name="dr_routing_downloading">جارٍ التنزيل</string>
+    <string name="dr_routing_auto">تحديث تلقائي كل 24 ساعة</string>
+</resources>

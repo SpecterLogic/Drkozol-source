@@ -48,17 +48,45 @@ object HappRoutingStore {
             provider.profiles.firstOrNull { it.name == provider.active }
         }
 
-    fun install(context: Context, groupId: String, link: String): Boolean {
-        val command = HappRoutingParser.parse(link) ?: return false
+    fun install(context: Context, groupId: String, link: String): Boolean = install(context,groupId,link,::download)
+
+    @JvmName("installWithFetcher")
+    internal fun install(context: Context, groupId: String, link: String, fetch: (String,File)->Unit): Boolean {
+        if (link.length > 1_000_000) return false
         val ownerId = importGroup(groupId)
         if (MmkvManager.decodeSubscription(ownerId) == null) return false
         val previous = state(ownerId)
         val downloaded = mutableListOf<File>()
+        val attemptId = java.security.MessageDigest.getInstance("SHA-256").digest(link.toByteArray()).joinToString("") { "%02x".format(it) }.take(24)
+        var command: HappRoutingCommand? = null
+        fun attempt(state: String) {
+            check(MmkvManager.updateSettingsString(key(ownerId)) { json ->
+                val current = json?.let { com.v2ray.ang.util.JsonUtil.fromJsonSafe(it, HappRoutingState::class.java) } ?: previous
+                val entries = current.attempts + (attemptId to RoutingAttempt(link, command?.profile?.name, state, System.currentTimeMillis()))
+                require(entries.size <= 40)
+                com.v2ray.ang.util.JsonUtil.toJson(current.copy(attempts = entries))
+            })
+        }
         return try {
-            val profile = command.profile?.let { source ->
+            attempt("downloading")
+            val remote = remoteRoutingSource(link)
+            val inline = if (remote != null) {
+                val temporary = File.createTempFile("routing-profile-", ".json", context.cacheDir)
+                try {
+                    fetch(remote.url, temporary)
+                    require(temporary.length() <= 1_000_000)
+                    val json = temporary.readText(Charsets.UTF_8)
+                    "happ://routing/" + (if (remote.activate) "onadd/" else "add/") + java.util.Base64.getEncoder().encodeToString(json.toByteArray(Charsets.UTF_8))
+                } finally { temporary.delete() }
+            } else link
+            val parsed = HappRoutingParser.parse(inline) ?: error("Invalid routing profile")
+            command = parsed
+            val profile = parsed.profile?.let { source ->
                 val assets = mutableMapOf<String, String>()
                 val directory = File(Utils.userAssetPath(context)).also { require(it.isDirectory) }
-                val previousProfile = previous.profiles.firstOrNull { it.name == source.name }
+                val previousProfile = previous.profiles.firstOrNull {
+                    it.name == source.name || (remote != null && it.sourceUrl == remote.url)
+                }
                 for ((kind, url) in listOf("geoip" to source.geoipUrl, "geosite" to source.geositeUrl)) {
                     if (url == null || source.rules.none { rule -> (if (kind == "geoip") rule.ip else rule.domain).orEmpty().any { it.startsWith("$kind:") } }) continue
                     val previousUrl = if (kind == "geoip") previousProfile?.geoipUrl else previousProfile?.geositeUrl
@@ -70,26 +98,56 @@ object HappRoutingStore {
                     }
                     val file = File(directory, "dr_happ_${java.util.UUID.randomUUID().toString().replace("-", "")}.dat")
                     downloaded += file
-                    download(url, file)
+                    fetch(url, file)
                     assets[kind] = file.name
                 }
-                source.copy(assetFiles = assets)
+                source.copy(assetFiles = assets, sourceUrl = remote?.url, autoRefresh = remote?.automatic ?: false, refreshedAt = System.currentTimeMillis())
             }
+            if(profile!=null) com.v2ray.ang.core.CoreNativeManager.validateRoutingProfile(context,profile)
             check(MmkvManager.updateSettingsString(key(ownerId)) { json ->
                 val current = json?.let { com.v2ray.ang.util.JsonUtil.fromJsonSafe(it, HappRoutingState::class.java) } ?: previous
-                val profiles = current.profiles.filterNot { it.name == profile?.name }.toMutableList()
+                val replaced = current.profiles.filter {
+                    it.name == profile?.name || (profile?.sourceUrl != null && it.sourceUrl == profile.sourceUrl)
+                }
+                val profiles = (current.profiles - replaced.toSet()).toMutableList()
                 profile?.let { profiles += it }
                 require(profiles.size <= 20 && MmkvManager.decodeSubscription(ownerId) != null)
-                com.v2ray.ang.util.JsonUtil.toJson(HappRoutingState(profiles,
-                    if (command.off) null else if (command.activate || current.active == null) profile?.name else current.active))
+                com.v2ray.ang.util.JsonUtil.toJson(current.copy(profiles = profiles,
+                    active = if (parsed.off) null else if (parsed.activate || current.active == null || replaced.any { it.name == current.active }) profile?.name else current.active,
+                    attempts = current.attempts - attemptId))
             })
+            syncAutoUpdates(context)
             SettingsChangeManager.makeSetupGroupTab()
             true
         } catch (error: Exception) {
             downloaded.forEach { it.delete() }
+            runCatching { attempt("failed") }
+            syncAutoUpdates(context)
             com.v2ray.ang.util.LogUtil.e(AppConfig.TAG, "Routing profile import failed group=$groupId", IllegalStateException(error.javaClass.simpleName))
             false
         }
+    }
+
+    fun syncAutoUpdates(context: Context) {
+        val request = androidx.work.PeriodicWorkRequestBuilder<RoutingRefreshWorker>(24, TimeUnit.HOURS)
+            .setConstraints(androidx.work.Constraints.Builder().setRequiredNetworkType(androidx.work.NetworkType.CONNECTED).build())
+            .setBackoffCriteria(androidx.work.BackoffPolicy.EXPONENTIAL, 15, TimeUnit.MINUTES).build()
+        try {
+            androidx.work.multiprocess.RemoteWorkManager.getInstance(context).enqueueUniquePeriodicWork(
+                "dr_routing_refresh", androidx.work.ExistingPeriodicWorkPolicy.KEEP, request)
+        } catch (error: Exception) {
+            com.v2ray.ang.util.LogUtil.e(AppConfig.TAG,"Routing refresh scheduling failed",IllegalStateException(error.javaClass.simpleName))
+        }
+    }
+
+    fun refresh(context: Context, groupId: String): Boolean {
+        val current = state(groupId)
+        val links = current.profiles.mapNotNull { profile ->
+            profile.sourceUrl?.takeIf { profile.autoRefresh }?.let {
+                "drkozol://autorouting/" + (if (profile.name == current.active) "onadd/" else "add/") + it
+            }
+        } + current.attempts.values.map { it.link }
+        return links.distinct().map { install(context, groupId, it) }.all { it }
     }
 
     private fun download(url: String, destination: File) {

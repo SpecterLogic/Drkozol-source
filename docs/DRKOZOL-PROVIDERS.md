@@ -10,6 +10,16 @@ The default Android User-Agent is `DrKozol/Android`. A user may override it per 
 
 Supported optional response metadata includes `profile-title` (plain or `base64:` UTF-8), `subscription-userinfo`, `profile-update-interval` in hours, `profile-web-page-url`, and `announce` / `profile-announce`. Explicit user choices for provider naming and update intervals remain authoritative. The optional `routing` header supports the compatible Happ routing profile format; it is not arbitrary code execution.
 
+## Android 1.5.3 integration additions
+
+- `drkozol://routing/onadd/<base64-UTF8-JSON>` imports and activates an inline profile. `add` imports it without replacing an existing active profile.
+- `drkozol://autorouting/onadd/https://example.com/routing.json` binds a provider to a public HTTPS JSON source. Independent routing refresh runs approximately every 24 hours, subject to Android background scheduling. Failed downloads retain the previous valid profile and are available for manual retry in Connection tools. HTTPS asset downloads reject private network destinations and invalid native routing data.
+- A provider may return `autorouting` instead of `routing` in its subscription response. Existing provider ownership and routing isolation still apply.
+- `drkozol://crypt1/<payload>` imports the public INCY crypt1 wire format. Confirmation shows the provider name with the URL concealed. The importer remembers this sharing format. This is obfuscation using public interoperability material, not private encryption. See `CRYPT1-NOTICE.txt`.
+- `drkozol://connect`, `disconnect`, `toggle`, and `status` open an explicit consent prompt. External links cannot silently stop a session or grant Android VPN permission. `open`/`close` are aliases for connect/disconnect.
+
+The buildless, local-processing generator is in `web/routing-builder/`. It generates routing JSON, autorouting links and crypt1 links without uploading entered subscription URLs. Examples above use reserved example domains, never a real subscription.
+
 ## Add a subscription button
 
 Generate this link on the provider's own subscription page or bot:

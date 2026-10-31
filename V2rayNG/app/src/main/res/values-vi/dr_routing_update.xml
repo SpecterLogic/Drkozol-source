@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="dr_link_confirm">Xác nhận</string>
+    <string name="dr_link_connect">Kết nối máy chủ đã chọn?</string>
+    <string name="dr_link_disconnect">Ngắt kết nối hiện tại?</string>
+    <string name="dr_link_toggle">Đổi trạng thái kết nối?</string>
+    <string name="dr_link_status">Mở trạng thái kết nối?</string>
+    <string name="dr_link_subscription">Gói đăng ký</string>
+    <string name="dr_routing_refresh">Cập nhật định tuyến</string>
+    <string name="dr_routing_failed">Tải thất bại; giữ quy tắc cũ</string>
+    <string name="dr_routing_downloading">Đang tải</string>
+    <string name="dr_routing_auto">Tự cập nhật mỗi 24 giờ</string>
+</resources>

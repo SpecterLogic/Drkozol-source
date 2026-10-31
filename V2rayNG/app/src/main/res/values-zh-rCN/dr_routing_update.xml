@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="dr_link_confirm">确认操作</string>
+    <string name="dr_link_connect">连接所选服务器？</string>
+    <string name="dr_link_disconnect">断开当前连接？</string>
+    <string name="dr_link_toggle">切换连接状态？</string>
+    <string name="dr_link_status">打开连接状态？</string>
+    <string name="dr_link_subscription">订阅</string>
+    <string name="dr_routing_refresh">更新路由</string>
+    <string name="dr_routing_failed">下载失败；保留原有规则</string>
+    <string name="dr_routing_downloading">正在下载</string>
+    <string name="dr_routing_auto">每24小时自动更新</string>
+</resources>

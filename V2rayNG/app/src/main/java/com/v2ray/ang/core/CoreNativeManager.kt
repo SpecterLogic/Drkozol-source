@@ -43,6 +43,29 @@ object CoreNativeManager {
         }
     }
 
+    /** Isolated no-listener configuration validation; never used as daemon lifecycle state. */
+    fun validateRoutingProfile(context: Context, profile: com.v2ray.ang.handler.HappRoutingProfile) {
+        com.v2ray.ang.handler.SettingsManager.initAssets(context,context.assets)
+        initCoreEnv(context)
+        val rules=com.v2ray.ang.handler.HappRoutingStore.rules("",profile).map {
+            com.v2ray.ang.dto.V2rayConfig.RoutingBean.RulesBean(ip=it.ip,domain=it.domain,port=it.port,
+                network=it.network,protocol=it.protocol,outboundTag="direct")
+        }
+        val config=com.google.gson.JsonObject().apply {
+            add("log",com.google.gson.JsonObject().apply { addProperty("loglevel","none") })
+            add("stats",com.google.gson.JsonObject())
+            add("inbounds",com.google.gson.JsonArray())
+            add("outbounds",com.google.gson.JsonArray().apply { add(com.google.gson.JsonObject().apply { addProperty("protocol","freedom");addProperty("tag","direct") }) })
+            add("routing",com.google.gson.JsonObject().apply { add("rules",com.google.gson.JsonParser.parseString(com.v2ray.ang.util.JsonUtil.toJson(rules))) })
+        }
+        val validator=newCoreController(object: CoreCallbackHandler {
+            override fun startup(): Long=0
+            override fun shutdown(): Long=0
+            override fun onEmitStatus(l: Long,s: String?): Long=0
+        })
+        try { validator.startLoop(config.toString(),0) } finally { validator.stopLoop() }
+    }
+
     fun reconcileBrowserDialer(dialerAddr: String) {
         try {
             Libv2ray.reconcileBrowserDialer(dialerAddr)

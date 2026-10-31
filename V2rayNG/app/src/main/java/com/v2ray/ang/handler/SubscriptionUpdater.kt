@@ -54,6 +54,7 @@ object SubscriptionUpdater {
         context: Context = AngApplication.application,
         forceReschedule: Boolean = false
     ) {
+        HappRoutingStore.syncAutoUpdates(context)
         // Replace preceding unconstrained test jobs once; subsequent syncs keep queued work.
         val schedulingUpgrade = !MmkvManager.decodeSettingsBool("dr_quiet_tests_145_migrated", false)
         if (schedulingUpgrade) {

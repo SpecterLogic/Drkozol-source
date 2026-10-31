@@ -12,7 +12,7 @@ import java.net.InetSocketAddress
 import java.net.Socket
 
 data class ToolsServer(val guid: String, val title: String, val favorite: Boolean, val quality: ProbeQuality)
-data class ToolsRoutingGroup(val id: String, val title: String, val names: List<String>, val active: String?)
+data class ToolsRoutingGroup(val id: String, val title: String, val names: List<String>, val active: String?, val attempts: List<Pair<String,String>> = emptyList(), val automatic: Set<String> = emptySet())
 enum class DiagnosticStep { DNS_OK, DNS_FAILED, TCP_OK, TCP_FAILED, TLS_OK, TLS_FAILED, NOT_APPLICABLE }
 data class ConnectionToolsState(val servers: List<ToolsServer> = emptyList(), val loading: Boolean = true,
     val busyGuid: String? = null, val diagnostics: Map<String, List<DiagnosticStep>> = emptyMap(),
@@ -23,6 +23,7 @@ sealed interface ToolsAction {
     data class Diagnose(val guid: String) : ToolsAction
     data class Policy(val value: String) : ToolsAction
     data class ImportWarp(val text: String) : ToolsAction
+    data class RefreshRouting(val group: String) : ToolsAction
     data class ActivateRouting(val group: String, val name: String?) : ToolsAction
 }
 
@@ -41,6 +42,7 @@ class ConnectionToolsViewModel(application: Application) : AndroidViewModel(appl
                 try {
                     withContext(Dispatchers.IO) {
                         when (action) {
+                            is ToolsAction.RefreshRouting -> check(HappRoutingStore.refresh(getApplication(), action.group))
                             is ToolsAction.ActivateRouting -> {
                                 check(HappRoutingStore.activate(action.group, action.name))
                             }
@@ -85,7 +87,8 @@ class ConnectionToolsViewModel(application: Application) : AndroidViewModel(appl
         }
         val routing = withContext(Dispatchers.IO) { MmkvManager.decodeSubscriptions().mapNotNull { group ->
             val routing = HappRoutingStore.state(group.guid)
-            if (routing.profiles.isEmpty()) null else ToolsRoutingGroup(group.guid, group.subscription.remarks, routing.profiles.map { it.name }, routing.active)
+            if (routing.profiles.isEmpty() && routing.attempts.isEmpty()) null else ToolsRoutingGroup(group.guid, group.subscription.remarks, routing.profiles.map { it.name }, routing.active,
+                routing.attempts.values.map { (it.name ?: "") to it.state }, routing.profiles.filter { it.autoRefresh }.map { it.name }.toSet())
         } }
         mutableState.update { it.copy(servers = servers, policy = policy, loading = false, routing = routing) }
     }

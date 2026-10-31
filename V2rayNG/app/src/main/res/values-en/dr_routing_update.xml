@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="dr_link_confirm">Confirm action</string>
+    <string name="dr_link_connect">Connect using the selected server?</string>
+    <string name="dr_link_disconnect">Disconnect the current connection?</string>
+    <string name="dr_link_toggle">Change the connection state?</string>
+    <string name="dr_link_status">Open connection status?</string>
+    <string name="dr_link_subscription">Subscription</string>
+    <string name="dr_routing_refresh">Refresh routing</string>
+    <string name="dr_routing_failed">Download failed — previous rules retained</string>
+    <string name="dr_routing_downloading">Downloading</string>
+    <string name="dr_routing_auto">Automatic refresh every 24 hours</string>
+</resources>

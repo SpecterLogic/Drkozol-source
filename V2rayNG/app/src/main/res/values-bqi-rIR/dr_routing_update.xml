@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="dr_link_confirm">تایید کار</string>
+    <string name="dr_link_connect">وا سرور پسندکرده وصل بویم؟</string>
+    <string name="dr_link_disconnect">اتصال حالایی قطع بوه؟</string>
+    <string name="dr_link_toggle">وضعیت اتصال عوض بوه؟</string>
+    <string name="dr_link_status">وضعیت اتصال وا بوه؟</string>
+    <string name="dr_link_subscription">اشتراک</string>
+    <string name="dr_routing_refresh">نو کردن مسیریابی</string>
+    <string name="dr_routing_failed">دانلود نشد؛ قاعده‌های قبلی موندن</string>
+    <string name="dr_routing_downloading">هنگ دانلود</string>
+    <string name="dr_routing_auto">هر ۲۴ ساعت خودکار نو بوه</string>
+</resources>

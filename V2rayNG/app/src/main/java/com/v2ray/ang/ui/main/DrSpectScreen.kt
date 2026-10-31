@@ -523,6 +523,7 @@ private fun ProviderCard(id: String, name: String, state: MainUiState, viewModel
                     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
                     FlowRow(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(if (selected) accent.copy(alpha = .12f) else Color.Transparent)
                         .insetSelection(selected, RoundedCornerShape(18.dp), glass, accent)
+                        .border(if (selected) 2.dp else 0.dp, if (selected) accent else Color.Transparent, RoundedCornerShape(18.dp))
                         .semantics(mergeDescendants = true) {}
                         .selectable(selected = selected, enabled = !accountInfo, role = Role.RadioButton,
                             onClick = { onAction(MainAction.SelectGroup(id)); onAction(MainAction.SelectServer(server.guid)) })
@@ -531,6 +532,8 @@ private fun ProviderCard(id: String, name: String, state: MainUiState, viewModel
                         Box(Modifier.size(38.dp).clip(RoundedCornerShape(12.dp)).background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment = Alignment.Center) {
                             val flag = configurationFlag(server.remarks)
                             if (flag != null) Text(flag, fontSize = 20.sp) else Icon(painterResource(R.drawable.dr_globe), null, Modifier.size(21.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                            if (selected) Icon(painterResource(R.drawable.ic_action_done), null,
+                                Modifier.align(Alignment.BottomEnd).size(16.dp).clip(CircleShape).background(accent), tint = MaterialTheme.colorScheme.onPrimary)
                         }
                         Spacer(Modifier.width(10.dp))
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {

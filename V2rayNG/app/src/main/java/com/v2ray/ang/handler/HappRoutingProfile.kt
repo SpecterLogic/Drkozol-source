@@ -8,17 +8,21 @@ import java.util.Base64
 data class HappRoutingProfile(val name: String, val rules: List<RulesetItem>, val globalProxy: Boolean,
     val domainStrategy: String, val remoteDns: String, val domesticDns: String, val fakeDns: Boolean,
     val hosts: Map<String, String>, val geoipUrl: String?, val geositeUrl: String?,
-    val assetFiles: Map<String, String> = emptyMap())
+    val assetFiles: Map<String, String> = emptyMap(),
+    val sourceUrl: String? = null, val autoRefresh: Boolean = false, val refreshedAt: Long = 0L)
 data class HappRoutingCommand(val profile: HappRoutingProfile? = null, val activate: Boolean = false, val off: Boolean = false)
-data class HappRoutingState(val profiles: List<HappRoutingProfile> = emptyList(), val active: String? = null)
+data class RoutingAttempt(val link: String, val name: String?, val state: String, val updatedAt: Long)
+data class HappRoutingState(val profiles: List<HappRoutingProfile> = emptyList(), val active: String? = null,
+    val attempts: Map<String, RoutingAttempt> = emptyMap())
 
 object HappRoutingParser {
     fun isLink(value: String): Boolean = value.trim().let {
-        it.startsWith("happ://routing/add/") || it.startsWith("happ://routing/onadd/") || it == "happ://routing/off"
+        it.matches(Regex("(?:happ|drkozol|incy)://(?:auto)?routing/(?:add|onadd)/.+", RegexOption.DOT_MATCHES_ALL)) ||
+            it in setOf("happ://routing/off", "drkozol://routing/off", "incy://routing/off")
     }
 
     fun parse(value: String): HappRoutingCommand? = runCatching {
-        val link = value.trim()
+        val link = value.trim().replaceFirst(Regex("^(?:drkozol|incy)://routing/"), "happ://routing/")
         require(link.length <= 1_000_000 && isLink(link))
         if (link == "happ://routing/off") return@runCatching HappRoutingCommand(off = true)
         val encoded = link.substringAfter("happ://routing/").substringAfter('/')

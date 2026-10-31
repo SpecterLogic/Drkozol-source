@@ -345,7 +345,7 @@ class MainRepository(
     }
 
     override fun shareProviderQr(id: String): android.graphics.Bitmap? =
-        MmkvManager.decodeSubscription(id)?.url?.takeIf { it.isNotBlank() }
+        MmkvManager.decodeSubscription(id)?.let(com.v2ray.ang.handler.SubscriptionLinkCodec::share)?.takeIf { it.isNotBlank() }
             ?.let { com.v2ray.ang.util.QRCodeDecoder.createQRCode(it) }
 
     override fun syncSubscriptions() {

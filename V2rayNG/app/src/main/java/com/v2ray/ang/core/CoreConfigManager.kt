@@ -209,6 +209,9 @@ object CoreConfigManager {
         }
 
         applyObservability(v2rayConfig, balancerStrategies)
+        if (primaryResolvedOutbound.profile.policyGroupServerIds != null) {
+            protectSelectedBalancerSessions(v2rayConfig)
+        }
         resolveOutboundDomainsToHosts(v2rayConfig)
 
         return v2rayConfig

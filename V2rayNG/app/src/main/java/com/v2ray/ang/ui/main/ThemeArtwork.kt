@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.AbsoluteAlignment
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.ContentScale
 import coil3.compose.AsyncImage
 import com.v2ray.ang.R
@@ -23,8 +25,8 @@ internal fun themeArtworkResource(palette: DrKozolPalette, dark: Boolean): Int? 
 internal fun ThemeArtwork(palette: DrKozolPalette, dark: Boolean, modifier: Modifier, preview: Boolean) {
     val resource = themeArtworkResource(palette, dark) ?: return
     Box(modifier) {
-        AsyncImage(model = resource, contentDescription = null, contentScale = ContentScale.Crop,
+        AsyncImage(model = resource, contentDescription = null, contentScale = ContentScale.Crop, alignment = AbsoluteAlignment.CenterRight,
             modifier = Modifier.matchParentSize())
-        if (!preview) Box(Modifier.matchParentSize().background(MaterialTheme.colorScheme.background.copy(alpha = if (dark) .66f else .76f)))
+        if (!preview) Box(Modifier.matchParentSize().background(Brush.horizontalGradient(listOf(MaterialTheme.colorScheme.background.copy(alpha = .88f), MaterialTheme.colorScheme.background.copy(alpha = .58f), MaterialTheme.colorScheme.background.copy(alpha = .20f)))))
     }
 }

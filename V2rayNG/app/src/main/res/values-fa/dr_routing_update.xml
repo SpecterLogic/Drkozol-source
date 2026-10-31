@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="dr_link_confirm">تأیید عملیات</string>
+    <string name="dr_link_connect">با سرور انتخابی متصل شویم؟</string>
+    <string name="dr_link_disconnect">اتصال فعلی قطع شود؟</string>
+    <string name="dr_link_toggle">وضعیت اتصال تغییر کند؟</string>
+    <string name="dr_link_status">وضعیت اتصال باز شود؟</string>
+    <string name="dr_link_subscription">اشتراک</string>
+    <string name="dr_routing_refresh">به‌روزرسانی مسیریابی</string>
+    <string name="dr_routing_failed">دانلود ناموفق؛ قواعد قبلی حفظ شدند</string>
+    <string name="dr_routing_downloading">در حال دانلود</string>
+    <string name="dr_routing_auto">به‌روزرسانی خودکار هر ۲۴ ساعت</string>
+</resources>
